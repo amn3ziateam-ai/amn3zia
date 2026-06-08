@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +36,7 @@ fun ChatListScreen(onOpenChat: (Long) -> Unit, onOpenSettings: () -> Unit, onOpe
                 actions = {
                     IconButton(onClick = viewModel::toggleGhostMode) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Filled.Visibility,
+                            imageVector = Icons.Filled.Visibility,
                             contentDescription = "Ghost mode",
                             tint = if (ghostMode) Color(0xFF7C5CFF) else Color.Gray,
                         )

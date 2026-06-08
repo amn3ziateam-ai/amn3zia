@@ -5,6 +5,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import org.drinkless.tdlib.TdApi
 
 sealed interface ProxyConfig {
@@ -52,13 +55,13 @@ class ProxyEngine(private val accountId: String, private val client: TdClient) {
                 }
                 is ProxyConfig.Socks5 -> {
                     val type = TdApi.ProxyTypeSocks5(config.username.orEmpty(), config.password.orEmpty())
-                    val proxy = client.send(TdApi.AddProxy(config.server, config.port, true, type))
-                    activeTdProxyId = proxy.id
+                    val added = client.send(TdApi.AddProxy(TdApi.Proxy(config.server, config.port, type), true, ""))
+                    activeTdProxyId = added.id
                 }
                 is ProxyConfig.MtProto -> {
                     val type = TdApi.ProxyTypeMtproto(config.secret)
-                    val proxy = client.send(TdApi.AddProxy(config.server, config.port, true, type))
-                    activeTdProxyId = proxy.id
+                    val added = client.send(TdApi.AddProxy(TdApi.Proxy(config.server, config.port, type), true, ""))
+                    activeTdProxyId = added.id
                 }
             }
             verifyConnectivityOrTriggerKillSwitch()
@@ -99,10 +102,13 @@ class ProxyEngine(private val accountId: String, private val client: TdClient) {
      */
     private suspend fun verifyConnectivityOrTriggerKillSwitch() {
         if (!killSwitchEnabled) return
-        repeat(CONNECTIVITY_CHECK_ATTEMPTS) { attempt ->
-            kotlinx.coroutines.delay(CONNECTIVITY_CHECK_INTERVAL_MS)
-            val state = runCatching { client.send(TdApi.GetConnectionState()) }.getOrNull()
-            if (state?.state is TdApi.ConnectionStateReady) return
+        // TDLib has no synchronous "get connection state" call — the state is pushed
+        // via UpdateConnectionState, so wait for one that reports Ready.
+        repeat(CONNECTIVITY_CHECK_ATTEMPTS) {
+            val update = withTimeoutOrNull(CONNECTIVITY_CHECK_INTERVAL_MS) {
+                client.updates.filterIsInstance<TdApi.UpdateConnectionState>().first()
+            }
+            if (update?.state is TdApi.ConnectionStateReady) return
         }
         engageKillSwitch()
     }

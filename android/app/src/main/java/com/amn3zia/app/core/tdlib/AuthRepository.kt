@@ -29,7 +29,7 @@ class AuthRepository(private val client: TdClient) {
     }
 
     suspend fun registerNewUser(firstName: String, lastName: String) {
-        client.send(TdApi.RegisterUser(firstName, lastName))
+        client.send(TdApi.RegisterUser(firstName, lastName, false))
     }
 
     /** Local logout only — never deletes the account from Telegram's servers. */

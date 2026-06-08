@@ -35,7 +35,7 @@ fun ChatListScreen(onOpenChat: (Long) -> Unit, onOpenSettings: () -> Unit, onOpe
                 actions = {
                     IconButton(onClick = viewModel::toggleGhostMode) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Filled.RemoveRedEye,
+                            imageVector = androidx.compose.material.icons.Icons.Filled.Visibility,
                             contentDescription = "Ghost mode",
                             tint = if (ghostMode) Color(0xFF7C5CFF) else Color.Gray,
                         )

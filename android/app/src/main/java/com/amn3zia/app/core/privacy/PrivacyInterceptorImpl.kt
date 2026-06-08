@@ -56,7 +56,7 @@ class PrivacyInterceptorImpl(
             scope.launch {
                 runCatching {
                     accounts.clientFor(accountId)?.send(
-                        TdApi.SetAutoDownloadSettings(antiTracking.autoDownloadSettings(), TdApi.AutoDownloadSettingsPresetLow())
+                        TdApi.SetAutoDownloadSettings(antiTracking.autoDownloadSettings(), TdApi.NetworkTypeOther())
                     )
                 }
             }

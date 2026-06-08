@@ -38,7 +38,7 @@ class ChatRepository(private val client: TdClient) {
     suspend fun loadChatList(limit: Int = 50): List<ChatSummary> {
         client.send(TdApi.LoadChats(TdApi.ChatListMain(), limit))
         val chats = client.send(TdApi.GetChats(TdApi.ChatListMain(), limit))
-        return chats.chatIds.mapNotNull { id ->
+        return chats.chatIds.toList().mapNotNull { id ->
             runCatching { fetchChatSummary(id) }.getOrNull()
         }
     }
@@ -77,7 +77,7 @@ class ChatRepository(private val client: TdClient) {
     suspend fun sendTextMessage(chatId: Long, text: String) {
         val formattedText = TdApi.FormattedText(text, emptyArray())
         val content = TdApi.InputMessageText(formattedText, null, true)
-        client.send(TdApi.SendMessage(chatId, 0, 0, null, null, content))
+        client.send(TdApi.SendMessage(chatId, null, null, null, null, content))
     }
 
     /**
@@ -91,7 +91,7 @@ class ChatRepository(private val client: TdClient) {
 
     suspend fun setTyping(chatId: Long, isTyping: Boolean) {
         val action: TdApi.ChatAction = if (isTyping) TdApi.ChatActionTyping() else TdApi.ChatActionCancel()
-        client.send(TdApi.SendChatAction(chatId, 0, action))
+        client.send(TdApi.SendChatAction(chatId, null, null, action))
     }
 }
 

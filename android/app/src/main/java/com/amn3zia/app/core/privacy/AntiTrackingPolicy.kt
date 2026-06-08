@@ -24,7 +24,7 @@ class AntiTrackingPolicy {
     /** Called from PrivacyInterceptor.beforeOutgoingRequest. Returns a possibly-rewritten function, or null to drop it. */
     fun <R : TdApi.Object> filterOutgoing(function: TdApi.Function<R>): TdApi.Function<R>? {
         return when {
-            disableLinkPreviews && function is TdApi.GetWebPagePreview -> null
+            disableLinkPreviews && function is TdApi.GetLinkPreview -> null
             disableLinkPreviews && function is TdApi.GetWebPageInstantView -> null
             blockExternalMedia && function is TdApi.DownloadFile && !function.synchronous -> null
             else -> function
@@ -35,7 +35,7 @@ class AntiTrackingPolicy {
     fun autoDownloadSettings(): TdApi.AutoDownloadSettings = TdApi.AutoDownloadSettings(
         !blockExternalMedia,   // isAutoDownloadEnabled
         0, 0, 0,               // max photo / video / other file sizes (bytes) — 0 = none when blocked
-        0L,                    // videoUploadBitrate
+        0,                     // videoUploadBitrate
         false, false, false, false, // preload* / use* flags — all disabled for anti-tracking
     )
 }

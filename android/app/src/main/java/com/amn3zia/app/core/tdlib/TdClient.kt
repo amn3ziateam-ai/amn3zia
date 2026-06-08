@@ -70,7 +70,21 @@ class TdClient(
             // Anti-tracking: do not let TDLib auto-download anything by default;
             // the privacy layer sets per-chat/per-network download rules explicitly.
         }
-        client.send(params) { /* result observed via UpdateAuthorizationState */ }
+        client.send(params) { result ->
+            // The authorization-state machine (observed via UpdateAuthorizationState)
+            // is the source of truth for the UI. But if TDLib rejects the parameters
+            // outright (e.g. invalid/missing api_id or api_hash), it never advances
+            // past AuthorizationStateWaitTdlibParameters and the UI would otherwise
+            // spin forever with no clue why — so at least surface it in logcat.
+            if (result.constructor == TdApi.Error.CONSTRUCTOR) {
+                val error = result as TdApi.Error
+                android.util.Log.e(
+                    "TdClient[$accountId]",
+                    "SetTdlibParameters rejected (code=${error.code}): ${error.message} " +
+                        "— check TELEGRAM_API_ID/TELEGRAM_API_HASH in local.properties/BuildConfig",
+                )
+            }
+        }
     }
 
     private fun onUpdate(obj: TdApi.Object) {

@@ -3,7 +3,6 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // Telegram API credentials (my.telegram.org) are read from local.properties so
@@ -58,6 +57,11 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    composeOptions {
+        // Compose compiler version compatible with Kotlin 1.9.24
+        // (see https://developer.android.com/jetpack/androidx/releases/compose-kotlin)
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     // TDLib ships native .so per ABI — place them under src/main/jniLibs/<abi>/libtdjni.so

@@ -24,6 +24,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         session.auth.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AuthState.Initializing)
     }
 
+    /** TEMPORARY: raw TdClient lifecycle trace, shown on-screen while debugging the launch hang. */
+    val debugLog: StateFlow<List<String>> by lazy { session.client.debugLog }
+
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 

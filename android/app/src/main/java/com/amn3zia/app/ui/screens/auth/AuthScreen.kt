@@ -1,10 +1,13 @@
 package com.amn3zia.app.ui.screens.auth
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -17,6 +20,7 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
     val viewModel: AuthViewModel = viewModel()
     val state by viewModel.authState.collectAsState()
     val error by viewModel.error.collectAsState()
+    val debugLog by viewModel.debugLog.collectAsState()
 
     LaunchedEffect(state) {
         if (state is AuthState.Ready) onAuthenticated()
@@ -37,13 +41,37 @@ fun AuthScreen(onAuthenticated: () -> Unit) {
             is AuthState.WaitingForCode -> CodeStep(onSubmit = viewModel::submitCode)
             is AuthState.WaitingForPassword -> PasswordStep(hint = s.hint, onSubmit = viewModel::submitPassword)
             is AuthState.WaitingForRegistration -> RegistrationStep(onSubmit = viewModel::register)
-            is AuthState.Initializing -> CircularProgressIndicator()
-            else -> CircularProgressIndicator()
+            is AuthState.Initializing -> {
+                CircularProgressIndicator()
+                DebugTrace(debugLog)
+            }
+            else -> {
+                CircularProgressIndicator()
+                DebugTrace(debugLog)
+            }
         }
 
         error?.let {
             Spacer(Modifier.height(16.dp))
             Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+        }
+    }
+}
+
+/**
+ * TEMPORARY: shows TdClient's raw lifecycle trace directly on screen.
+ * adb/logcat is unreliable on the test emulator, so this is the fastest way
+ * to see exactly where TDLib initialization is stuck. Remove once the
+ * launch-hang investigation is done.
+ */
+@Composable
+private fun DebugTrace(lines: List<String>) {
+    Spacer(Modifier.height(24.dp))
+    Text("debug trace:", fontSize = 11.sp, color = Color.Gray)
+    Spacer(Modifier.height(4.dp))
+    LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+        items(lines) { line ->
+            Text(line, fontSize = 10.sp, color = Color.Gray)
         }
     }
 }

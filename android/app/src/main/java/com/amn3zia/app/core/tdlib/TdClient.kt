@@ -49,8 +49,24 @@ class TdClient(
 
     private fun trace(msg: String) {
         android.util.Log.d("TdClient[$accountId]", msg)
-        _debugLog.update { (it + msg).takeLast(30) }
+        _debugLog.update { current ->
+            // Collapse runs of identical messages (e.g. floods of UpdateOption)
+            // into a single "msg (xN)" line so rare/important entries (auth
+            // state transitions, errors) don't get pushed out of the window.
+            val last = current.lastOrNull()
+            val collapsedMsg = msg
+            val updated = if (last != null && stripCount(last) == collapsedMsg) {
+                current.dropLast(1) + "$collapsedMsg (x${countOf(last) + 1})"
+            } else {
+                current + collapsedMsg
+            }
+            updated.takeLast(40)
+        }
     }
+
+    private fun stripCount(line: String): String = line.replace(Regex(""" \(x\d+\)$"""), "")
+    private fun countOf(line: String): Int =
+        Regex(""" \(x(\d+)\)$""").find(line)?.groupValues?.get(1)?.toIntOrNull() ?: 1
     // ------------------------------------------------------------------------
 
     private val clientRef = AtomicReference<Client?>(null)

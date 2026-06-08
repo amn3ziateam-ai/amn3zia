@@ -94,10 +94,10 @@ dependencies {
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
     implementation("androidx.sqlite:sqlite-ktx:2.4.0")
 
-    // TDLib Java bindings (org.drinkless.td.libcore.telegram.*)
-    // Provided as a local AAR/jar built from TDLib source — see /docs/BUILD_TDLIB.md
-    compileOnly(files("libs/tdlib.jar"))
-    implementation(files("libs/tdlib.jar"))
+    // TDLib Java bindings (org.drinkless.tdlib.*) — the generated Client.java/TdApi.java
+    // sources are placed directly under src/main/java by the build (see
+    // .github/workflows/build-android.yml / docs/BUILD_TDLIB.md) and compiled with the app,
+    // so no separate jar dependency is needed.
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

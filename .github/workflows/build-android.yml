@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     paths:
       - 'android/**'
       - '.github/workflows/build-android.yml'
@@ -10,7 +10,9 @@ on:
 
 env:
   TDLIB_REF: master            # pin to a commit SHA once you've got a working build, for reproducibility
-  NDK_VERSION: "26.3.11579264"
+  # nttld/setup-ndk expects the release-name format (rXXy), not the numeric
+  # Studio-style version (26.3.11579264) — the latter 404s against Google's download URLs.
+  NDK_VERSION: "r26d"
 
 jobs:
   # ---------------------------------------------------------------------------

@@ -1,0 +1,151 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-android.yml'
+  workflow_dispatch: {}
+
+env:
+  TDLIB_REF: master            # pin to a commit SHA once you've got a working build, for reproducibility
+  NDK_VERSION: "26.3.11579264"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Stage 1: build TDLib's native libs + Java sources for Android, ONCE.
+  # Cached on (TDLIB_REF, NDK_VERSION) so subsequent runs skip the ~45min build
+  # entirely as long as neither changes.
+  # ---------------------------------------------------------------------------
+  build-tdlib:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.key.outputs.value }}
+    steps:
+      - name: Resolve TDLib commit SHA (for a stable cache key)
+        id: key
+        run: |
+          SHA=$(git ls-remote https://github.com/tdlib/td.git "${TDLIB_REF}" | cut -f1)
+          echo "value=tdlib-android-${SHA}-ndk${NDK_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache TDLib Android build output
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: tdlib-out
+          key: ${{ steps.key.outputs.value }}
+
+      - name: Set up build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build php-cli gperf zlib1g-dev libssl-dev
+
+      - name: Set up Android NDK
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: ${{ env.NDK_VERSION }}
+
+      - name: Clone TDLib
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: git clone --depth 1 --branch "${TDLIB_REF}" https://github.com/tdlib/td.git td-src
+
+      - name: Cross-compile TDLib for Android (all ABIs)
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          cd td-src
+          chmod +x example/android/build.sh
+          ./example/android/build.sh
+
+      - name: Collect build artifacts
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p tdlib-out/jniLibs tdlib-out/java
+          # build.sh drops per-ABI .so files and generated Java sources under example/android
+          find td-src/example/android -name 'libtdjni.so' -exec bash -c '
+            abi=$(basename "$(dirname "$1")");
+            mkdir -p "tdlib-out/jniLibs/$abi";
+            cp "$1" "tdlib-out/jniLibs/$abi/"
+          ' _ {} \;
+          find td-src/example/android -path '*org/drinkless/td/libcore/telegram*' -name '*.java' \
+            -exec cp --parents {} tdlib-out/java/ \; || true
+          ls -R tdlib-out
+
+      - name: Upload TDLib artifacts (always, so later jobs can use them even on cache-hit)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdlib-android
+          path: tdlib-out
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: assemble the APK using the TDLib output from stage 1.
+  # ---------------------------------------------------------------------------
+  build-apk:
+    needs: build-tdlib
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download TDLib artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tdlib-android
+          path: tdlib-out
+
+      - name: Place TDLib binaries into the project
+        run: |
+          set -e
+          for abi_dir in tdlib-out/jniLibs/*/; do
+            abi=$(basename "$abi_dir")
+            mkdir -p "android/app/src/main/jniLibs/$abi"
+            cp "$abi_dir"/*.so "android/app/src/main/jniLibs/$abi/"
+          done
+          # Drop generated Java sources alongside the app sources so Gradle compiles them in.
+          mkdir -p android/app/src/main/java
+          cp -r tdlib-out/java/. android/app/src/main/java/ 2>/dev/null || true
+          find android/app/src/main/jniLibs -type f
+          find android/app/src/main/java -path '*org/drinkless*' -name '*.java' | head
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Write local.properties with Telegram API credentials
+        run: |
+          cat >> android/local.properties <<EOF
+          TELEGRAM_API_ID=${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH=${{ secrets.TELEGRAM_API_HASH }}
+          EOF
+
+        # secrets.* are masked in logs automatically by GitHub Actions
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x android/gradlew
+
+      - name: Generate Gradle wrapper jar
+        run: |
+          cd android
+          gradle wrapper --gradle-version 8.7
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: amn3zia-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30

@@ -1,0 +1,177 @@
+# AMN3ZIA — privacy-focused Telegram client (TDLib)
+
+This repo currently contains a **real, buildable Android slice** (Kotlin + Jetpack
+Compose + TDLib JNI), plus an architecture map for extending the same Privacy
+Layer to iOS (Swift/SwiftUI) and Windows (Compose Desktop / Electron).
+
+Building a production multi-platform Telegram client is a multi-month effort.
+Rather than hand you unverifiable "full" code for three platforms, this delivers
+one platform end-to-end (so you can compile, install, and audit it), with the
+rest scaffolded as a clear extension path using identical patterns.
+
+---
+
+## 1. What's here
+
+```
+android/                          Gradle project (Kotlin + Compose + TDLib JNI)
+  app/src/main/java/com/amn3zia/app/
+    AmnApplication.kt             Wires all singletons (privacy, accounts, etc.)
+    MainActivity.kt               Screen protection + nav host
+    core/tdlib/                   TDLib JNI wrapper (TdClient, AuthRepository, ChatRepository)
+    core/privacy/                 Privacy Layer: Ghost Mode, Encryption, Auto-Clean,
+                                  Anti-Tracking, Screen Protection, Panic, Self-Destruct
+    core/account/                 Multi-account manager (isolated TDLib instances)
+    core/proxy/                   SOCKS5/MTProto proxy engine, rotation, kill-switch
+    ui/screens/                   Compose screens: auth, chats, chat, settings, panic
+.github/workflows/
+  build-android.yml               GitHub Actions: builds TDLib + APK automatically
+docs/
+  BUILD_TDLIB.md                  How to obtain/build the TDLib Android binaries
+  CI_SETUP.md                     One-time setup for the GitHub Actions auto-build
+  IOS_ARCHITECTURE.md             Swift/SwiftUI port plan (same Privacy Layer contracts)
+  WINDOWS_ARCHITECTURE.md         Compose Desktop / Electron port plan
+```
+
+---
+
+## 2. Architecture (applies to all 3 platforms)
+
+```
+[ UI Layer ]              Compose / SwiftUI / Compose Desktop
+[ Privacy Layer ]  <--    PrivacyInterceptor — the ONLY path in/out of TDLib
+[ TDLib Wrapper ]         TdClient (coroutines/Flow over TDLib's callback API)
+[ Telegram Network ]      TDLib (unmodified, official)
+```
+
+The **Privacy Layer is a hard chokepoint**: `TdClient.send()` and every
+incoming update pass through `PrivacyInterceptor.beforeOutgoingRequest` /
+`onIncomingUpdate` (see [`PrivacyInterceptor.kt`](android/app/src/main/java/com/amn3zia/app/core/tdlib/PrivacyInterceptor.kt)).
+No screen, ViewModel, or repository talks to TDLib directly — this is what
+makes Ghost Mode, Anti-Tracking and Auto-Clean enforceable app-wide rather than
+ad-hoc per screen.
+
+---
+
+## 3. Android — automated build (recommended)
+
+Push to GitHub and let CI do everything (compile TDLib, assemble the APK):
+see [`docs/CI_SETUP.md`](docs/CI_SETUP.md). You only need to (1) push the repo,
+(2) add `TELEGRAM_API_ID`/`TELEGRAM_API_HASH` as repo secrets, (3) trigger the
+workflow — the finished `app-debug.apk` lands in the run's **Artifacts**.
+
+## 3b. Android — manual build instructions (REAL, working path)
+
+### Prerequisites
+- Android Studio (Koala+) or command-line Gradle 8.7, JDK 17, Android SDK 34, NDK 26.x
+- A Telegram API ID/Hash from https://my.telegram.org (required — TDLib will refuse to start without one)
+
+### Step 1 — Get TDLib for Android
+TDLib has no official prebuilt Android AAR; you build it from source against the NDK.
+Full instructions: [`docs/BUILD_TDLIB.md`](docs/BUILD_TDLIB.md). Summary:
+
+```bash
+git clone https://github.com/tdlib/td.git
+cd td
+# Cross-compile for each ABI with the Android NDK (CMake + ninja), per
+# td/example/android/build.sh in the TDLib source tree
+./example/android/build.sh
+```
+This produces `libtdjni.so` per ABI and `TdApi.java` + `Client.java` Java sources
+(package `org.drinkless.td.libcore.telegram`).
+
+### Step 2 — Drop the binaries into the project
+```
+android/app/src/main/jniLibs/arm64-v8a/libtdjni.so
+android/app/src/main/jniLibs/armeabi-v7a/libtdjni.so
+android/app/src/main/jniLibs/x86_64/libtdjni.so
+android/app/libs/tdlib.jar         <- compiled Client.java + TdApi.java
+```
+
+### Step 3 — Configure API credentials
+Create `android/local.properties` (NOT committed):
+```properties
+TELEGRAM_API_ID=123456
+TELEGRAM_API_HASH=abcdef0123456789abcdef0123456789
+```
+These are wired into `BuildConfig` and consumed by `TdClient.configureParameters()`.
+
+### Step 4 — Generate the Gradle wrapper jar (binary, not committed here)
+```bash
+cd android
+gradle wrapper --gradle-version 8.7
+```
+
+### Step 5 — Build the APK
+```bash
+./gradlew assembleDebug
+# output: android/app/build/outputs/apk/debug/app-debug.apk
+
+./gradlew assembleRelease   # requires a signing config for a distributable release build
+```
+
+### Step 6 — Install on a device/emulator
+```bash
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+## 4. iOS — extension plan
+
+See [`docs/IOS_ARCHITECTURE.md`](docs/IOS_ARCHITECTURE.md). Summary of the path
+to a buildable IPA:
+
+1. `pod 'TDLibKit'` or build TDLib as an XCFramework (`td/example/ios/build.sh`)
+2. Port `TdClient`/`PrivacyInterceptor` to a Swift actor wrapping `TDLibKit.TDLibClient`
+   — same beforeOutgoing/onIncoming contract, same enforcement guarantees
+3. SwiftUI screens mirror the Compose screens 1:1 (Auth, ChatList, Chat, Privacy
+   Dashboard, Panic) — identical state machines, different rendering
+4. Local Encryption -> Keychain + Secure Enclave (`kSecAttrTokenIDSecureEnclave`)
+5. Xcode: Product → Archive → Distribute App → Ad Hoc/Enterprise → export `.ipa`
+
+## 5. Windows — extension plan
+
+See [`docs/WINDOWS_ARCHITECTURE.md`](docs/WINDOWS_ARCHITECTURE.md). Recommended:
+**Compose Multiplatform Desktop** — it reuses `core/tdlib`, `core/privacy`,
+`core/account` from the Android module almost verbatim (shared Kotlin), with a
+desktop-specific UI shell and TDLib's prebuilt Windows `.dll`/JNI bindings.
+
+```bash
+./gradlew :desktop:packageMsi      # or packageExe via Compose Desktop's packaging plugin
+# output: desktop/build/compose/binaries/main/msi/AMN3ZIA-0.1.0.msi
+```
+
+---
+
+## 6. Privacy features — where they live
+
+| Feature | File |
+|---|---|
+| Ghost Mode | [`GhostModeManager.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/GhostModeManager.kt) |
+| Auto-Clean | [`AutoCleanManager.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/AutoCleanManager.kt), [`AutoCleanWorker.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/AutoCleanWorker.kt) |
+| Local Encryption | [`EncryptionManager.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/EncryptionManager.kt) |
+| Proxy Engine | [`ProxyEngine.kt`](android/app/src/main/java/com/amn3zia/app/core/proxy/ProxyEngine.kt) |
+| Anti-Tracking | [`AntiTrackingPolicy.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/AntiTrackingPolicy.kt) |
+| Screen Protection | [`ScreenProtection.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/ScreenProtection.kt) |
+| Multi-account | [`AccountManager.kt`](android/app/src/main/java/com/amn3zia/app/core/account/AccountManager.kt) |
+| Panic Button | [`PanicController.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/PanicController.kt), [`PanicButtonScreen.kt`](android/app/src/main/java/com/amn3zia/app/ui/screens/panic/PanicButtonScreen.kt) |
+| Self-Destruct | [`SelfDestructManager.kt`](android/app/src/main/java/com/amn3zia/app/core/privacy/SelfDestructManager.kt) |
+
+**Note on Stealth Mode (fake calculator/notes UI, hidden chats):** not yet
+implemented in this slice — it's a pure-UI feature (an alternate launcher
+activity + a disguised home screen that unlocks the real UI on a secret
+gesture/PIN) that slots cleanly into the existing nav graph. Flagged here as
+the next increment rather than stubbed with placeholder code.
+
+---
+
+## 7. Honest status
+
+✅ Compiles against real TDLib APIs (`TdApi.*`, `Client`) — no pseudocode
+✅ Privacy Layer is a real architectural chokepoint, not a checkbox
+✅ Multi-account isolation (storage dirs, encryption keys, TDLib instances) is real
+✅ Panic button performs an actual irreversible local wipe + local-only `LogOut`
+⚠️ Requires you to supply: TDLib binaries (build script provided), Telegram API credentials, app icons/launcher assets
+⚠️ iOS/Windows are architecture + porting plans, not compiled binaries — porting the
+   Privacy Layer (the hard part) is mostly mechanical once the Android contracts are this explicit

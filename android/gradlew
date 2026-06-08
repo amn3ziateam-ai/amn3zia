@@ -1,0 +1,7 @@
+#!/bin/sh
+# Gradle start up script for POSIX. Uses the locally configured Gradle distribution
+# defined in gradle/wrapper/gradle-wrapper.properties. Generate the wrapper jar with:
+#   gradle wrapper --gradle-version 8.7
+# if gradle-wrapper.jar is not present (binary jar intentionally not committed here).
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec gradle "$@" --project-dir "$DIR"

@@ -10,9 +10,9 @@ on:
 
 env:
   TDLIB_REF: master            # pin to a commit SHA once you've got a working build, for reproducibility
-  # nttld/setup-ndk expects the release-name format (rXXy), not the numeric
-  # Studio-style version (26.3.11579264) — the latter 404s against Google's download URLs.
-  NDK_VERSION: "r26d"
+  # TDLib's example/android scripts pass this straight to `sdkmanager "ndk;<version>"`,
+  # so it must be the numeric package version (not the release-name like "r26d").
+  NDK_VERSION: "26.3.11579264"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -38,18 +38,18 @@ jobs:
           path: tdlib-out
           key: ${{ steps.key.outputs.value }}
 
+      - name: Set up JDK 17
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Set up build dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build php-cli gperf zlib1g-dev libssl-dev
-
-      - name: Set up Android NDK
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: ${{ env.NDK_VERSION }}
+          sudo apt-get install -y cmake ninja-build php-cli gperf zlib1g-dev libssl-dev unzip
 
       - name: Clone TDLib
         if: steps.cache.outputs.cache-hit != 'true'
@@ -57,25 +57,21 @@ jobs:
 
       - name: Cross-compile TDLib for Android (all ABIs)
         if: steps.cache.outputs.cache-hit != 'true'
-        env:
-          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          cd td-src
-          chmod +x example/android/build.sh
-          ./example/android/build.sh
+          cd td-src/example/android
+          chmod +x check-environment.sh fetch-sdk.sh build-openssl.sh build-tdlib.sh
+          ./fetch-sdk.sh SDK "${NDK_VERSION}"
+          ./build-openssl.sh SDK "${NDK_VERSION}"
+          ./build-tdlib.sh SDK "${NDK_VERSION}"
 
       - name: Collect build artifacts
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p tdlib-out/jniLibs tdlib-out/java
-          # build.sh drops per-ABI .so files and generated Java sources under example/android
-          find td-src/example/android -name 'libtdjni.so' -exec bash -c '
-            abi=$(basename "$(dirname "$1")");
-            mkdir -p "tdlib-out/jniLibs/$abi";
-            cp "$1" "tdlib-out/jniLibs/$abi/"
-          ' _ {} \;
-          find td-src/example/android -path '*org/drinkless/td/libcore/telegram*' -name '*.java' \
-            -exec cp --parents {} tdlib-out/java/ \; || true
+          # build-tdlib.sh drops per-ABI .so files under tdlib/libs/<abi>/ and
+          # generated Java sources (org.drinkless.tdlib) under tdlib/java/
+          cp -r td-src/example/android/tdlib/libs/. tdlib-out/jniLibs/
+          cp -r td-src/example/android/tdlib/java/. tdlib-out/java/
           ls -R tdlib-out
 
       - name: Upload TDLib artifacts (always, so later jobs can use them even on cache-hit)

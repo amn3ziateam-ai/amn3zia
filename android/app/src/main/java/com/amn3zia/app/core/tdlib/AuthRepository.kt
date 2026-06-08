@@ -3,7 +3,7 @@ package com.amn3zia.app.core.tdlib
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
-import org.drinkless.td.libcore.telegram.TdApi
+import org.drinkless.tdlib.TdApi
 
 /**
  * Adapts TDLib's authorization-state machine to a simple sealed [AuthState]

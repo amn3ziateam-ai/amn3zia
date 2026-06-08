@@ -9,7 +9,7 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.amn3zia.app.core.account.AccountManager
 import kotlinx.coroutines.launch
-import org.drinkless.td.libcore.telegram.TdApi
+import org.drinkless.tdlib.TdApi
 import java.util.concurrent.TimeUnit
 
 enum class AutoCleanTrigger { TIMER, INACTIVITY, APP_CLOSE }

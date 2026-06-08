@@ -1,6 +1,6 @@
 package com.amn3zia.app.core.privacy
 
-import org.drinkless.td.libcore.telegram.TdApi
+import org.drinkless.tdlib.TdApi
 
 /**
  * Anti-Tracking — client-side controls over metadata-leaking behaviors:

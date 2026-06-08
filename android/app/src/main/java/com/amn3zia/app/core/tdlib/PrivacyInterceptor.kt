@@ -1,6 +1,6 @@
 package com.amn3zia.app.core.tdlib
 
-import org.drinkless.td.libcore.telegram.TdApi
+import org.drinkless.tdlib.TdApi
 
 /**
  * The single chokepoint between the UI/business logic and raw TDLib traffic.

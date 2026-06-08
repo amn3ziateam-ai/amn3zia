@@ -2,7 +2,7 @@ package com.amn3zia.app.core.tdlib
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterIsInstance
-import org.drinkless.td.libcore.telegram.TdApi
+import org.drinkless.tdlib.TdApi
 
 data class ChatSummary(
     val id: Long,

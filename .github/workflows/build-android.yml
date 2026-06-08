@@ -128,13 +128,23 @@ jobs:
 
         # secrets.* are masked in logs automatically by GitHub Actions
 
+      - name: Fetch Gradle 8.7 wrapper files
+        # The runner's preinstalled Gradle (9.x) `wrapper` task fails its
+        # "Test of distribution url" check against services.gradle.org's
+        # redirect chain, even though the URL resolves fine (verified with curl).
+        # Sidestep that broken validation by fetching the wrapper files
+        # directly from the tagged Gradle source release instead.
+        run: |
+          set -e
+          mkdir -p android/gradle/wrapper
+          base="https://raw.githubusercontent.com/gradle/gradle/v8.7.0"
+          curl -sSfL "$base/gradlew" -o android/gradlew
+          curl -sSfL "$base/gradlew.bat" -o android/gradlew.bat
+          curl -sSfL "$base/gradle/wrapper/gradle-wrapper.jar" -o android/gradle/wrapper/gradle-wrapper.jar
+          curl -sSfL "$base/gradle/wrapper/gradle-wrapper.properties" -o android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Grant execute permission to gradlew
         run: chmod +x android/gradlew
-
-      - name: Generate Gradle wrapper jar
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.7
 
       - name: Build debug APK
         run: |

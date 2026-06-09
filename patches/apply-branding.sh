@@ -121,5 +121,24 @@ if [ -f "$SCRIPT_DIR/amn3zia.attheme" ]; then
   echo "    Copied amn3zia.attheme"
 fi
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. AMN3ZIA FEATURE PATCHES
+# ─────────────────────────────────────────────────────────────────────────────
+echo "  [5/5] AMN3ZIA feature patches..."
+
+# View Once bypass (save TTL photos/videos before self-destruct)
+if [ -f "$SCRIPT_DIR/anti-view-once.sh" ]; then
+  bash "$SCRIPT_DIR/anti-view-once.sh" "$TG"
+else
+  echo "    WARN: anti-view-once.sh not found"
+fi
+
+# Anti-delete (keep deleted messages visible with "Deleted" marker)
+if [ -f "$SCRIPT_DIR/anti-delete.sh" ]; then
+  bash "$SCRIPT_DIR/anti-delete.sh" "$TG"
+else
+  echo "    WARN: anti-delete.sh not found"
+fi
+
 echo ""
 echo "==> Done. App: AMN3ZIA | Accent: #4F7CFF | API ID: ${API_ID:-(not set)}"

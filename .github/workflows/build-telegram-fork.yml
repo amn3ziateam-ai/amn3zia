@@ -19,7 +19,7 @@ jobs:
   build-fork:
     name: Build APK (Telegram fork + AMN3ZIA branding)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       # ── 1. Checkout THIS repo (contains patches/) ─────────────────────────
@@ -42,16 +42,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # ── 4. NDK (Telegram master requires NDK 27.2.12479018) ──────────────
+      # ── 4. NDK 27.2 (matches Telegram master ndkVersion) ──────────────────
       - name: Install NDK 27.2
         run: |
           ANDROID_SDK=$ANDROID_HOME
           echo "SDK: $ANDROID_SDK"
           $ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager \
             "ndk;27.2.12479018" \
-            --sdk_root="$ANDROID_SDK" || true
+            --sdk_root="$ANDROID_SDK"
           echo "ANDROID_NDK_HOME=$ANDROID_SDK/ndk/27.2.12479018" >> $GITHUB_ENV
           echo "NDK_HOME=$ANDROID_SDK/ndk/27.2.12479018" >> $GITHUB_ENV
+          ls "$ANDROID_SDK/ndk/27.2.12479018" | head -5
 
       # ── 5. Apply AMN3ZIA branding patches ─────────────────────────────────
       - name: Apply AMN3ZIA branding
@@ -73,28 +74,41 @@ jobs:
           restore-keys: tg-fork-gradle-
 
       # ── 7. Build debug APK ────────────────────────────────────────────────
+      # TMessagesProj is a LIBRARY (.aar), TMessagesProj_App is the APP (.apk).
+      # pipefail ensures Gradle failures are not masked by the tee pipe.
       - name: Build debug APK
         working-directory: tg-src
         run: |
+          set -o pipefail
           chmod +x gradlew
-          # TMessagesProj_App is the actual application module (TMessagesProj is a library)
           ./gradlew :TMessagesProj_App:assembleAfatDebug \
             -Pandroid.ndkVersion=27.2.12479018 \
-            --no-daemon --stacktrace 2>&1 | tail -200
+            --no-daemon --stacktrace \
+            2>&1 | tee /tmp/gradle_build.log
+          echo "=== Last 50 lines of Gradle output ==="
+          tail -50 /tmp/gradle_build.log
 
-      # ── 8. Find APK and upload ────────────────────────────────────────────
+      # ── 8. Find APK — diagnostic output ───────────────────────────────────
       - name: Find built APKs
+        if: always()
         run: |
-          echo "=== All APK files ==="
-          find tg-src -name "*.apk" -type f 2>/dev/null || echo "(none found)"
-          echo "=== TMessagesProj_App outputs ==="
-          find tg-src/TMessagesProj_App/build/outputs -type f 2>/dev/null | head -40 || echo "(empty)"
+          echo "=== All APK files anywhere under tg-src ==="
+          find tg-src -name "*.apk" -type f 2>/dev/null || echo "(none)"
+          echo ""
+          echo "=== TMessagesProj_App/build/outputs tree ==="
+          find tg-src/TMessagesProj_App/build/outputs -type f 2>/dev/null | head -40 \
+            || echo "(directory does not exist)"
+          echo ""
+          echo "=== Full build/outputs tree (all modules) ==="
+          find tg-src -path "*/build/outputs" -type d 2>/dev/null \
+            | xargs -I{} find {} -name "*.apk" 2>/dev/null || echo "(no apks)"
 
+      # ── 9. Upload APK ─────────────────────────────────────────────────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: amn3zia-fork-debug
-          # APK produced by the app module: TMessagesProj_App/build/outputs/apk/afat/debug/
-          path: tg-src/TMessagesProj_App/build/outputs/apk/
+          # afat flavor debug APK: TMessagesProj_App/build/outputs/apk/afat/debug/app.apk
+          path: tg-src/TMessagesProj_App/build/outputs/apk/afat/debug/
           if-no-files-found: error
           retention-days: 14

@@ -40,10 +40,11 @@ if [ -n "$API_ID" ] && [ -n "$API_HASH" ]; then
   } >> "$TG/local.properties" 2>/dev/null || true
 
   # BuildVars.java style
+  # IMPORTANT: match "public static int APP_ID" exactly — do NOT match HUAWEI_APP_ID etc.
   BV="$TG/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java"
   if [ -f "$BV" ]; then
-    sed -i "s/APP_ID = [0-9]*/APP_ID = $API_ID/" "$BV" 2>/dev/null || true
-    sed -i "s/APP_HASH = \"[^\"]*\"/APP_HASH = \"$API_HASH\"/" "$BV" 2>/dev/null || true
+    sed -i "s/public static int APP_ID = [0-9]*/public static int APP_ID = $API_ID/" "$BV" 2>/dev/null || true
+    sed -i "s/public static String APP_HASH = \"[^\"]*\"/public static String APP_HASH = \"$API_HASH\"/" "$BV" 2>/dev/null || true
     echo "    Patched BuildVars.java"
   fi
 

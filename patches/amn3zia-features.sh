@@ -262,12 +262,13 @@ import sys
 path = sys.argv[1]
 with open(path,'r',encoding='utf-8',errors='replace') as f: src=f.read()
 
-# 4a. Add menu item after the Privacy & Security row (id=3)
-OLD_ITEM = 'items.add(SettingCell.Factory.of(3, IconBackgroundColors.GREEN'
-NEW_ITEM = (OLD_ITEM + '\n        '
-    + 'items.add(SettingCell.Factory.of(100, 0xFF4F7CFF, 0xFF3D6BEF, '
+# 4a. Add menu item BEFORE the Privacy & Security row (id=3)
+# The original call spans multiple lines, so we prepend our item before the whole statement.
+AMN_ITEM = ('items.add(SettingCell.Factory.of(100, 0xFF4F7CFF, 0xFF3D6BEF, '
     + 'org.telegram.messenger.R.drawable.settings_privacy, '
-    + '"AMN3ZIA Privacy", "Ghost Mode · Паника · App Lock"));')
+    + '"AMN3ZIA Privacy", "Ghost Mode · Паника · App Lock"));\n        ')
+OLD_ITEM = 'items.add(SettingCell.Factory.of(3, IconBackgroundColors.GREEN'
+NEW_ITEM = AMN_ITEM + OLD_ITEM
 if OLD_ITEM in src:
     src = src.replace(OLD_ITEM, NEW_ITEM, 1)
     print('  PATCHED SettingsActivity: menu item added')

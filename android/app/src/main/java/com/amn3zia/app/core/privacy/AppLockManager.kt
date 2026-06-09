@@ -80,7 +80,7 @@ class AppLockManager(
         } else {
             failedAttempts++
             if (failedAttempts >= maxFailedAttempts) {
-                scope.launch { selfDestruct.executeWipe() }
+                scope.launch { selfDestruct.manualTrigger() }
             }
             false
         }

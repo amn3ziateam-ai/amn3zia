@@ -21,7 +21,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val authState: StateFlow<AuthState> by lazy {
-        session.auth.state.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AuthState.Initializing)
+        // SharingStarted.Eagerly: start collecting immediately when authState is
+        // first accessed (happens before the UI subscribes), so no auth-state
+        // events emitted on the TDLib thread are missed even if the collector
+        // isn't attached yet. Belt-and-suspenders alongside replay=1 in TdClient.
+        session.auth.state.stateIn(viewModelScope, SharingStarted.Eagerly, AuthState.Initializing)
     }
 
     /** TEMPORARY: raw TdClient lifecycle trace, shown on-screen while debugging the launch hang. */

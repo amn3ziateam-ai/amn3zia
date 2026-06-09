@@ -34,6 +34,10 @@ class TdClient(
     private val interceptor: PrivacyInterceptor,
 ) {
     private val _updates = MutableSharedFlow<TdApi.Object>(
+        replay = 1,           // FIX: replay the latest update to late subscribers.
+        // Without replay, UpdateAuthorizationState fires on TDLib's background
+        // thread before AuthViewModel's stateIn collector has subscribed, and is
+        // permanently lost → UI stays stuck on AuthState.Initializing forever.
         extraBufferCapacity = 256,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )

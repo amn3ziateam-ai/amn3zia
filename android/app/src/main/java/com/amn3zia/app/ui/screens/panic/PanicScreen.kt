@@ -19,7 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.amn3zia.app.ui.theme.TgColors
+import com.amn3zia.app.ui.theme.AmnColors
 import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,23 +27,22 @@ import kotlin.random.Random
 fun PanicScreen(onBack: () -> Unit, onWipe: () -> Unit = {}) {
     val code = remember { String.format("%06d", Random.nextInt(0, 999999)) }
     var input by remember { mutableStateOf("") }
-    var confirmed by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = TgColors.Bg,
+        containerColor = AmnColors.Background,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = TgColors.BgSecondary,
-                    titleContentColor = TgColors.TextPrimary,
-                    navigationIconContentColor = TgColors.Blue,
+                    containerColor = AmnColors.Surface,
+                    titleContentColor = AmnColors.Error,
+                    navigationIconContentColor = AmnColors.Primary,
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TgColors.Blue)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = AmnColors.Primary)
                     }
                 },
-                title = { Text("Panic — Wipe Everything", fontWeight = FontWeight.Medium, fontSize = 18.sp, color = TgColors.Red) },
+                title = { Text("Emergency Wipe", fontWeight = FontWeight.SemiBold, fontSize = 17.sp, color = AmnColors.Error) },
             )
         },
     ) { padding ->
@@ -54,45 +53,45 @@ fun PanicScreen(onBack: () -> Unit, onWipe: () -> Unit = {}) {
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(36.dp))
 
             // Warning icon
             Box(
                 modifier = Modifier
-                    .size(88.dp)
+                    .size(80.dp)
                     .clip(CircleShape)
-                    .background(TgColors.Red.copy(alpha = 0.12f)),
+                    .background(AmnColors.Error.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Warning, contentDescription = null, tint = TgColors.Red, modifier = Modifier.size(44.dp))
+                Icon(Icons.Filled.Warning, null, tint = AmnColors.Error, modifier = Modifier.size(40.dp))
             }
 
-            Spacer(Modifier.height(24.dp))
-            Text("IRREVERSIBLE ACTION", color = TgColors.Red, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            Spacer(Modifier.height(20.dp))
+            Text("IRREVERSIBLE ACTION", color = AmnColors.Error, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
             Spacer(Modifier.height(12.dp))
+
             Text(
-                "This will permanently delete:\n• All local chat messages\n• All media and files\n• Encryption keys\n• Database and cache\n\nYou will be logged out.\nYour Telegram account will NOT be deleted.",
-                color = TgColors.TextSecondary,
+                text = "This will permanently delete:\n• All messages & media\n• Encryption keys\n• App database & cache\n\nYou will be signed out.\nYour Telegram account will NOT be deleted.",
+                color = AmnColors.TextSecondary,
                 fontSize = 14.sp,
-                lineHeight = 20.sp,
+                lineHeight = 21.sp,
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(28.dp))
 
-            // Confirmation code box
+            // Confirmation code card
             Surface(
-                color = TgColors.BgSecondary,
-                shape = RoundedCornerShape(10.dp),
+                color = AmnColors.Surface,
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 0.dp,
+                shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("Type this code to confirm:", color = TgColors.TextSecondary, fontSize = 13.sp)
+                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Type this code to confirm", color = AmnColors.TextSecondary, fontSize = 13.sp)
                     Spacer(Modifier.height(8.dp))
-                    Text(code, color = TgColors.TextPrimary, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = 8.sp)
+                    Text(code, color = AmnColors.TextPrimary, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 8.sp)
                 }
             }
 
@@ -101,47 +100,44 @@ fun PanicScreen(onBack: () -> Unit, onWipe: () -> Unit = {}) {
             OutlinedTextField(
                 value = input,
                 onValueChange = { if (it.length <= 6) input = it },
-                placeholder = { Text("Enter code", color = TgColors.TextHint) },
+                placeholder = { Text("Enter confirmation code", color = AmnColors.TextTertiary) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TgColors.TextPrimary,
-                    unfocusedTextColor = TgColors.TextPrimary,
-                    focusedBorderColor = TgColors.Red,
-                    unfocusedBorderColor = TgColors.TextHint,
-                    cursorColor = TgColors.Red,
-                    focusedContainerColor = TgColors.BgSecondary,
-                    unfocusedContainerColor = TgColors.BgSecondary,
+                    focusedTextColor      = AmnColors.TextPrimary,
+                    unfocusedTextColor    = AmnColors.TextPrimary,
+                    focusedBorderColor    = AmnColors.Error,
+                    unfocusedBorderColor  = AmnColors.Border,
+                    cursorColor           = AmnColors.Error,
+                    focusedContainerColor = AmnColors.Surface,
+                    unfocusedContainerColor = AmnColors.Surface,
                 ),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
 
             Button(
-                onClick = {
-                    if (input == code) {
-                        confirmed = true
-                        onWipe()
-                    }
-                },
+                onClick = { if (input == code) onWipe() },
                 enabled = input == code,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = TgColors.PanicRed,
-                    disabledContainerColor = TgColors.BgSecondary,
+                    containerColor = AmnColors.Error,
+                    disabledContainerColor = AmnColors.SurfaceAlt,
+                    disabledContentColor = AmnColors.TextDisabled,
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
+                elevation = ButtonDefaults.buttonElevation(0.dp),
             ) {
-                Icon(Icons.Filled.DeleteForever, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(Icons.Filled.DeleteForever, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("WIPE ALL DATA", fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
 
-            Spacer(Modifier.height(16.dp))
-
+            Spacer(Modifier.height(12.dp))
             TextButton(onClick = onBack) {
-                Text("Cancel", color = TgColors.TextSecondary, fontSize = 14.sp)
+                Text("Cancel", color = AmnColors.TextSecondary)
             }
         }
     }

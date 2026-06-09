@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.amn3zia.app.core.tdlib.MessageItem
 import com.amn3zia.app.ui.components.TgAvatar
-import com.amn3zia.app.ui.theme.TgColors
+import com.amn3zia.app.ui.theme.AmnColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,8 +31,8 @@ fun ChatScreen(chatId: Long, onBack: () -> Unit) {
     val viewModel: ChatViewModel = viewModel()
     LaunchedEffect(chatId) { viewModel.open(chatId) }
 
-    val messages by viewModel.messages.collectAsState()
-    val draft by viewModel.draft.collectAsState()
+    val messages  by viewModel.messages.collectAsState()
+    val draft     by viewModel.draft.collectAsState()
     val chatTitle by viewModel.chatTitle.collectAsState()
 
     val listState = rememberLazyListState()
@@ -41,35 +41,38 @@ fun ChatScreen(chatId: Long, onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = TgColors.Bg,
+        containerColor = AmnColors.Background,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = TgColors.BgSecondary,
-                    titleContentColor = TgColors.TextPrimary,
-                    navigationIconContentColor = TgColors.Blue,
-                    actionIconContentColor = TgColors.TextSecondary,
+                    containerColor         = AmnColors.Surface,
+                    titleContentColor      = AmnColors.TextPrimary,
+                    navigationIconContentColor = AmnColors.Primary,
+                    actionIconContentColor = AmnColors.TextSecondary,
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TgColors.Blue)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = AmnColors.Primary)
                     }
                 },
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
                         TgAvatar(title = chatTitle, size = 36.dp)
                         Column {
-                            Text(chatTitle, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = TgColors.TextPrimary)
-                            Text("last seen recently", fontSize = 12.sp, color = TgColors.TextSecondary)
+                            Text(chatTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = AmnColors.TextPrimary)
+                            Text("last seen recently", fontSize = 12.sp, color = AmnColors.Primary)
                         }
                     }
                 },
                 actions = {
                     IconButton(onClick = {}) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search", tint = TgColors.TextSecondary)
+                        Icon(Icons.Filled.Phone, "Call", tint = AmnColors.Primary)
                     }
                     IconButton(onClick = {}) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "More", tint = TgColors.TextSecondary)
+                        Icon(Icons.Filled.MoreVert, "More", tint = AmnColors.TextSecondary)
                     }
                 },
             )
@@ -82,27 +85,23 @@ fun ChatScreen(chatId: Long, onBack: () -> Unit) {
             )
         },
     ) { padding ->
-        // Chat wallpaper-style background
-        Box(
+        LazyColumn(
+            state = listState,
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(TgColors.Bg),
+                .background(AmnColors.Background)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp),
-            ) {
-                items(messages, key = { it.id }) { message ->
-                    MessageBubble(message = message)
-                    Spacer(Modifier.height(2.dp))
-                }
+            items(messages, key = { it.id }) { message ->
+                MessageBubble(message = message)
+                Spacer(Modifier.height(2.dp))
             }
         }
     }
 }
 
-// ── Message bubble ────────────────────────────────────────────────────────────
+// ── Message bubble ─────────────────────────────────────────────────────────────
 
 @Composable
 private fun MessageBubble(message: MessageItem) {
@@ -111,63 +110,69 @@ private fun MessageBubble(message: MessageItem) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
         horizontalArrangement = if (isOut) Arrangement.End else Arrangement.Start,
     ) {
-        if (!isOut) {
-            Spacer(Modifier.width(8.dp))
-        }
-        Column(
-            horizontalAlignment = if (isOut) Alignment.End else Alignment.Start,
-            modifier = Modifier.widthIn(max = 280.dp),
+        if (!isOut) Spacer(Modifier.width(8.dp))
+
+        Box(
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .clip(
+                    RoundedCornerShape(
+                        topStart    = if (isOut) 16.dp else 4.dp,
+                        topEnd      = if (isOut) 4.dp else 16.dp,
+                        bottomStart = 16.dp,
+                        bottomEnd   = 16.dp,
+                    )
+                )
+                .background(if (isOut) AmnColors.BubbleMine else AmnColors.BubbleOther)
+                .then(
+                    if (!isOut) Modifier.padding(0.dp)  // shadow via elevation
+                    else Modifier
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = if (isOut) 16.dp else 4.dp,
-                            topEnd = if (isOut) 4.dp else 16.dp,
-                            bottomStart = 16.dp,
-                            bottomEnd = 16.dp,
-                        )
-                    )
-                    .background(if (isOut) TgColors.BubbleMine else TgColors.BubbleOther)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            ) {
-                Column {
+            Column {
+                Text(
+                    text = message.text,
+                    color = if (isOut) AmnColors.TextBubbleMine else AmnColors.TextBubbleOther,
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
+                )
+                Spacer(Modifier.height(2.dp))
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.align(Alignment.End),
+                ) {
                     Text(
-                        text = message.text,
-                        color = TgColors.TextPrimary,
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp,
+                        text = "now",
+                        color = if (isOut) AmnColors.TimestampMine else AmnColors.TimestampOther,
+                        fontSize = 11.sp,
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.End,
-                        modifier = Modifier.align(Alignment.End),
-                    ) {
-                        Text("now", color = TgColors.TextSecondary, fontSize = 11.sp)
-                        if (isOut) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Filled.DoneAll,
-                                contentDescription = null,
-                                tint = TgColors.SentTick,
-                                modifier = Modifier.size(14.dp).align(Alignment.CenterVertically),
-                            )
-                        }
+                    if (isOut) {
+                        Spacer(Modifier.width(3.dp))
+                        Icon(
+                            imageVector = Icons.Filled.DoneAll,
+                            contentDescription = null,
+                            tint = AmnColors.ReadTick,
+                            modifier = Modifier.size(14.dp).align(Alignment.CenterVertically),
+                        )
                     }
                 }
             }
         }
-        if (isOut) {
-            Spacer(Modifier.width(8.dp))
-        }
+
+        if (isOut) Spacer(Modifier.width(8.dp))
     }
 }
 
-// ── Composer ──────────────────────────────────────────────────────────────────
+// ── Composer ───────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ChatComposer(draft: String, onDraftChanged: (String) -> Unit, onSend: () -> Unit) {
-    Surface(color = TgColors.BgSecondary, tonalElevation = 0.dp) {
+    Surface(
+        color = AmnColors.Surface,
+        tonalElevation = 0.dp,
+        shadowElevation = 4.dp,
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -176,42 +181,44 @@ private fun ChatComposer(draft: String, onDraftChanged: (String) -> Unit, onSend
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Emoji / attach
+            // Attach / emoji
             IconButton(onClick = {}) {
-                Icon(Icons.Filled.EmojiEmotions, contentDescription = "Emoji", tint = TgColors.TextSecondary)
+                Icon(Icons.Filled.EmojiEmotions, "Emoji", tint = AmnColors.TextSecondary)
             }
 
             // Text field
             TextField(
                 value = draft,
                 onValueChange = onDraftChanged,
-                modifier = Modifier.weight(1f).clip(RoundedCornerShape(24.dp)),
-                placeholder = { Text("Message", color = TgColors.TextHint, fontSize = 15.sp) },
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(24.dp)),
+                placeholder = { Text("Message", color = AmnColors.TextTertiary, fontSize = 15.sp) },
                 maxLines = 6,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = TgColors.BgTertiary,
-                    unfocusedContainerColor = TgColors.BgTertiary,
-                    focusedIndicatorColor = Color.Transparent,
+                    focusedContainerColor   = AmnColors.InputBackground,
+                    unfocusedContainerColor = AmnColors.InputBackground,
+                    focusedIndicatorColor   = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = TgColors.TextPrimary,
-                    unfocusedTextColor = TgColors.TextPrimary,
-                    cursorColor = TgColors.Blue,
+                    focusedTextColor        = AmnColors.TextPrimary,
+                    unfocusedTextColor      = AmnColors.TextPrimary,
+                    cursorColor             = AmnColors.Primary,
                 ),
             )
 
-            // Send / microphone
+            // Send / mic button
             val canSend = draft.isNotBlank()
             IconButton(
                 onClick = { if (canSend) onSend() },
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(if (canSend) TgColors.Blue else Color.Transparent),
+                    .background(if (canSend) AmnColors.Primary else Color.Transparent),
             ) {
                 Icon(
                     imageVector = if (canSend) Icons.AutoMirrored.Filled.Send else Icons.Filled.Mic,
                     contentDescription = "Send",
-                    tint = if (canSend) Color.White else TgColors.TextSecondary,
+                    tint = if (canSend) Color.White else AmnColors.TextSecondary,
                     modifier = Modifier.size(22.dp),
                 )
             }

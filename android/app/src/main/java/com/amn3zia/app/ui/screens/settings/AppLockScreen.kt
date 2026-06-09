@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.amn3zia.app.ui.theme.TgColors
+import com.amn3zia.app.ui.theme.AmnColors
 
 private val PAD = listOf("1","2","3","4","5","6","7","8","9","","0","⌫")
 
@@ -30,23 +30,22 @@ fun AppLockScreen(onBack: () -> Unit) {
     var confirmPin by remember { mutableStateOf("") }
     var isConfirming by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf("") }
-    var lockEnabled by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = TgColors.Bg,
+        containerColor = AmnColors.Background,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = TgColors.BgSecondary,
-                    titleContentColor = TgColors.TextPrimary,
-                    navigationIconContentColor = TgColors.Blue,
+                    containerColor = AmnColors.Surface,
+                    titleContentColor = AmnColors.TextPrimary,
+                    navigationIconContentColor = AmnColors.Primary,
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TgColors.Blue)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = AmnColors.Primary)
                     }
                 },
-                title = { Text("App Lock", fontWeight = FontWeight.Medium, fontSize = 18.sp) },
+                title = { Text("App Lock", fontWeight = FontWeight.SemiBold, fontSize = 17.sp) },
             )
         },
     ) { padding ->
@@ -56,49 +55,50 @@ fun AppLockScreen(onBack: () -> Unit) {
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(36.dp))
 
-            // Icon
+            // Lock icon
             Box(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(CircleShape)
-                    .background(TgColors.BgSecondary),
+                    .background(AmnColors.PrimaryLight),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    if (lockEnabled) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                    contentDescription = null,
-                    tint = TgColors.Blue,
-                    modifier = Modifier.size(36.dp),
+                    if (isConfirming) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                    null,
+                    tint = AmnColors.Primary,
+                    modifier = Modifier.size(34.dp),
                 )
             }
 
             Spacer(Modifier.height(20.dp))
             Text(
-                if (!isConfirming) "Enter a PIN" else "Confirm PIN",
-                color = TgColors.TextPrimary,
+                if (!isConfirming) "Set PIN Code" else "Confirm PIN Code",
+                color = AmnColors.TextPrimary,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
-                if (errorMsg.isNotEmpty()) errorMsg else "4–6 digits",
-                color = if (errorMsg.isNotEmpty()) TgColors.Red else TgColors.TextHint,
+                if (errorMsg.isNotEmpty()) errorMsg else "Enter 4–6 digits",
+                color = if (errorMsg.isNotEmpty()) AmnColors.Error else AmnColors.TextTertiary,
                 fontSize = 13.sp,
             )
             Spacer(Modifier.height(24.dp))
 
             // PIN dots
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val current = if (isConfirming) confirmPin else pin
+            val current = if (isConfirming) confirmPin else pin
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 repeat(6) { i ->
+                    val filled = i < current.length
                     Box(
                         modifier = Modifier
-                            .size(14.dp)
+                            .size(13.dp)
                             .clip(CircleShape)
-                            .background(if (i < current.length) TgColors.Blue else Color.Transparent)
-                            .border(1.5.dp, if (i < current.length) TgColors.Blue else TgColors.TextHint, CircleShape),
+                            .background(if (filled) AmnColors.Primary else Color.Transparent)
+                            .border(1.5.dp, if (filled) AmnColors.Primary else AmnColors.Border, CircleShape),
                     )
                 }
             }
@@ -106,16 +106,15 @@ fun AppLockScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(36.dp))
 
             // Numpad
-            val current = if (isConfirming) confirmPin else pin
             Column(
                 modifier = Modifier.padding(horizontal = 32.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 PAD.chunked(3).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                         row.forEach { key ->
-                            PadKey(key) {
+                            PinKey(key) {
                                 errorMsg = ""
                                 when (key) {
                                     "⌫" -> {
@@ -124,29 +123,16 @@ fun AppLockScreen(onBack: () -> Unit) {
                                     }
                                     "" -> {}
                                     else -> {
-                                        if (!isConfirming && pin.length < 6) {
-                                            pin += key
-                                            if (pin.length >= 4) {
-                                                // ready — wait for next press or user can tap confirm
-                                            }
-                                        } else if (isConfirming && confirmPin.length < 6) {
-                                            confirmPin += key
-                                        }
-                                        // Auto-submit at 6 digits
+                                        if (!isConfirming && pin.length < 6) pin += key
+                                        else if (isConfirming && confirmPin.length < 6) confirmPin += key
+
                                         val newVal = if (isConfirming) confirmPin else pin
-                                        if (newVal.length == 6) {
-                                            if (!isConfirming) {
-                                                isConfirming = true
-                                            } else {
-                                                if (confirmPin == pin) {
-                                                    lockEnabled = true
-                                                    onBack()
-                                                } else {
-                                                    errorMsg = "PINs don't match — try again"
-                                                    pin = ""; confirmPin = ""; isConfirming = false
-                                                }
-                                            }
-                                        }
+                                        if (newVal.length == 6) autoSubmit(
+                                            pin = pin, confirmPin = confirmPin, isConfirming = isConfirming,
+                                            onAdvance = { isConfirming = true },
+                                            onSuccess = { onBack() },
+                                            onMismatch = { errorMsg = "PINs don't match. Try again."; pin = ""; confirmPin = ""; isConfirming = false },
+                                        )
                                     }
                                 }
                             }
@@ -155,49 +141,60 @@ fun AppLockScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Confirm button (for 4–5 digit PINs)
-            val currentLen = (if (isConfirming) confirmPin else pin).length
-            if (currentLen in 4..5) {
-                Spacer(Modifier.height(20.dp))
+            // Manual confirm button for 4–5 digit PINs
+            val curLen = (if (isConfirming) confirmPin else pin).length
+            if (curLen in 4..5) {
+                Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        if (!isConfirming) {
-                            isConfirming = true
-                        } else {
-                            if (confirmPin == pin) {
-                                lockEnabled = true
-                                onBack()
-                            } else {
-                                errorMsg = "PINs don't match — try again"
-                                pin = ""; confirmPin = ""; isConfirming = false
-                            }
-                        }
+                        autoSubmit(
+                            pin = pin, confirmPin = confirmPin, isConfirming = isConfirming,
+                            onAdvance = { isConfirming = true },
+                            onSuccess = { onBack() },
+                            onMismatch = { errorMsg = "PINs don't match. Try again."; pin = ""; confirmPin = ""; isConfirming = false },
+                        )
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = TgColors.Blue),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.padding(horizontal = 48.dp).fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = AmnColors.Primary),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(0.dp),
+                    modifier = Modifier.padding(horizontal = 40.dp).fillMaxWidth(),
                 ) {
-                    Text(if (isConfirming) "Confirm" else "Continue", fontWeight = FontWeight.SemiBold)
+                    Text(if (isConfirming) "Confirm" else "Next", fontWeight = FontWeight.SemiBold)
                 }
             }
         }
     }
 }
 
+private fun autoSubmit(
+    pin: String,
+    confirmPin: String,
+    isConfirming: Boolean,
+    onAdvance: () -> Unit,
+    onSuccess: () -> Unit,
+    onMismatch: () -> Unit,
+) {
+    if (!isConfirming) {
+        onAdvance()
+    } else {
+        if (confirmPin == pin) onSuccess() else onMismatch()
+    }
+}
+
 @Composable
-private fun PadKey(label: String, onClick: () -> Unit) {
+private fun PinKey(label: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(72.dp)
+            .size(74.dp)
             .clip(CircleShape)
-            .background(if (label.isNotEmpty()) TgColors.BgSecondary else Color.Transparent)
+            .background(if (label.isNotEmpty()) AmnColors.Surface else Color.Transparent)
+            .then(if (label.isNotEmpty()) Modifier.border(1.dp, AmnColors.Border, CircleShape) else Modifier)
             .clickable(enabled = label.isNotEmpty(), onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (label == "⌫") {
-            Icon(Icons.Filled.Backspace, contentDescription = "Delete", tint = TgColors.TextSecondary, modifier = Modifier.size(22.dp))
-        } else if (label.isNotEmpty()) {
-            Text(label, color = TgColors.TextPrimary, fontSize = 26.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+        when {
+            label == "⌫" -> Icon(Icons.Filled.Backspace, null, tint = AmnColors.TextSecondary, modifier = Modifier.size(20.dp))
+            label.isNotEmpty() -> Text(label, color = AmnColors.TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
         }
     }
 }

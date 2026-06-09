@@ -1,0 +1,273 @@
+// AMN3ZIA Premium Theme for Telegram Android
+// Colour system:
+//   Primary:          #4F7CFF
+//   Primary Hover:    #628BFF
+//   Background:       #F7F9FC
+//   Surface:          #FFFFFF
+//   Secondary Surface:#F2F5FA
+//   Text Primary:     #111827
+//   Text Secondary:   #6B7280
+//   Border:           #E5E7EB
+//   Success:          #34C759
+//   Warning:          #FF9F0A
+//   Error:            #FF3B30
+//
+// Format: key=0xAARRGGBB  (alpha always 0xFF for opaque)
+
+// ── Action bar ───────────────────────────────────────────────────────────────
+actionBarDefault=0xFFFFFFFF
+actionBarDefaultTitle=0xFF111827
+actionBarDefaultSubtitle=0xFF6B7280
+actionBarDefaultIcon=0xFF4F7CFF
+actionBarDefaultMenu=0xFF6B7280
+actionBarDefaultMenuBackground=0xFFFFFFFF
+actionBarDefaultSearch=0xFF111827
+actionBarDefaultSearchPlaceholder=0xFF9CA3AF
+
+actionBarActionModeDefault=0xFFFFFFFF
+actionBarActionModeDefaultTop=0x99F7F9FC
+actionBarActionModeDefaultIcon=0xFF4F7CFF
+actionBarActionModeDefaultTitle=0xFF111827
+
+// ── Window & background ──────────────────────────────────────────────────────
+windowBackgroundWhite=0xFFFFFFFF
+windowBackgroundGray=0xFFF7F9FC
+windowBackgroundGrayShadow=0x00000000
+windowBackgroundWhiteBlackText=0xFF111827
+windowBackgroundWhiteGrayText=0xFF6B7280
+windowBackgroundWhiteGrayText2=0xFF9CA3AF
+windowBackgroundWhiteGrayText3=0xFFD1D5DB
+windowBackgroundWhiteGrayText4=0xFFE5E7EB
+windowBackgroundWhiteGrayText5=0xFFF2F5FA
+windowBackgroundWhiteGrayText6=0xFFF7F9FC
+windowBackgroundWhiteGrayText7=0xFFF9FAFB
+windowBackgroundWhiteGrayText8=0xFFFFFFFF
+windowBackgroundWhiteHintText=0xFF9CA3AF
+windowBackgroundWhiteValueText=0xFF4F7CFF
+windowBackgroundWhiteLinkText=0xFF4F7CFF
+windowBackgroundWhiteBlueText=0xFF4F7CFF
+windowBackgroundWhiteBlueText2=0xFF4F7CFF
+windowBackgroundWhiteBlueText3=0xFF4F7CFF
+windowBackgroundWhiteBlueText4=0xFF4F7CFF
+windowBackgroundWhiteBlueText5=0xFF4F7CFF
+windowBackgroundWhiteBlueText6=0xFF4F7CFF
+windowBackgroundWhiteBlueText7=0xFF4F7CFF
+windowBackgroundWhiteBlueHeader=0xFF4F7CFF
+windowBackgroundWhiteInputField=0xFFE5E7EB
+windowBackgroundWhiteInputFieldActivated=0xFF4F7CFF
+windowBackgroundChecked=0xFF4F7CFF
+windowBackgroundCheckText=0xFFFFFFFF
+windowBackgroundUnchecked=0xFFD1D5DB
+
+// ── Chat list ────────────────────────────────────────────────────────────────
+chats_name=0xFF111827
+chats_nameMessage=0xFF6B7280
+chats_nameMessage_threeLines=0xFF6B7280
+chats_draft=0xFFFF3B30
+chats_action=0xFF4F7CFF
+chats_actionBackground=0xFF4F7CFF
+chats_actionPressedBackground=0xFF628BFF
+chats_unreadCounter=0xFF4F7CFF
+chats_unreadCounterText=0xFFFFFFFF
+chats_unreadCounterMuted=0xFFD1D5DB
+chats_date=0xFF9CA3AF
+chats_pinnedOverlay=0x0A111827
+chats_tabletSelectedOverlay=0x0A4F7CFF
+chats_sentCheck=0xFF4F7CFF
+chats_sentReadCheck=0xFF4F7CFF
+chats_muteIcon=0xFFD1D5DB
+chats_menuItemText=0xFF111827
+chats_menuItemIcon=0xFF6B7280
+chats_menuBackground=0xFFFFFFFF
+chats_menuTopShadow=0x00000000
+chats_menuTopShadowCats=0x00000000
+chats_menuTopBackground=0xFFF7F9FC
+chats_menuItemBackgroundSelected=0xFFF2F5FA
+chats_menuCloud=0xFFFFFFFF
+chats_menuCloudBackgroundCats=0xFF4F7CFF
+chats_menuPhoneCats=0xFF6B7280
+chats_menuName=0xFF111827
+chats_menuPhone=0xFF6B7280
+chats_menuTopBackgroundCats=0xFF4F7CFF
+chats_archivePinBackground=0xFFE5E7EB
+chats_archiveBackground=0xFFF2F5FA
+chats_onlineCircle=0xFF34C759
+
+// ── Message bubbles ──────────────────────────────────────────────────────────
+// Outgoing (right side) — AMN3ZIA blue bubble
+chat_outBubble=0xFF4F7CFF
+chat_outBubbleGradient=0xFF628BFF
+chat_outBubbleShadow=0x1A4F7CFF
+chat_outBubbleSelected=0xFF628BFF
+chat_outPreviewInstantText=0xFFFFFFFF
+
+// Incoming (left side) — clean white bubble
+chat_inBubble=0xFFFFFFFF
+chat_inBubbleShadow=0x1A111827
+chat_inBubbleSelected=0xFFF2F5FA
+
+// Outgoing text
+chat_outSentDate=0xCCFFFFFF
+chat_outViews=0xCCFFFFFF
+chat_outSentCheck=0xFFFFFFFF
+chat_outSentCheckRead=0xFFFFFFFF
+chat_outVoiceSeekbarFill=0xFFFFFFFF
+chat_outVoiceSeekbar=0x66FFFFFF
+chat_outVoiceSeekbarSelected=0xFFFFFFFF
+chat_outAudioTitleText=0xFFFFFFFF
+chat_outAudioPerformerText=0xCCFFFFFF
+chat_outAudioSeekbarFill=0xFFFFFFFF
+chat_outAudioSeekbar=0x66FFFFFF
+chat_outAudioSeekbarSelected=0xFFFFFFFF
+chat_outAudioDurationText=0xCCFFFFFF
+chat_outButtons=0xFFFFFFFF
+chat_outButtonsSelected=0xFFE8EFFF
+chat_outForwardedNameText=0xFFE8EFFF
+chat_outMessageText=0xFFFFFFFF
+chat_outReplyLine=0xFFFFFFFF
+chat_outReplyMessageText=0xCCFFFFFF
+chat_outReplyNameText=0xFFFFFFFF
+
+// Incoming text
+chat_inSentDate=0xFF9CA3AF
+chat_inViews=0xFF9CA3AF
+chat_inMessageText=0xFF111827
+chat_inReplyLine=0xFF4F7CFF
+chat_inReplyNameText=0xFF4F7CFF
+chat_inReplyMessageText=0xFF6B7280
+chat_inForwardedNameText=0xFF4F7CFF
+chat_inAudioTitleText=0xFF111827
+chat_inAudioPerformerText=0xFF6B7280
+chat_inAudioSeekbarFill=0xFF4F7CFF
+chat_inAudioSeekbar=0xFFE5E7EB
+chat_inVoiceSeekbarFill=0xFF4F7CFF
+chat_inVoiceSeekbar=0xFFE5E7EB
+
+// ── Input panel (composer) ───────────────────────────────────────────────────
+chat_messagePanelBackground=0xFFFFFFFF
+chat_messagePanelShadow=0x1A111827
+chat_messagePanelText=0xFF111827
+chat_messagePanelHint=0xFF9CA3AF
+chat_messagePanelCursor=0xFF4F7CFF
+chat_messagePanelIcons=0xFF6B7280
+chat_messagePanelSend=0xFF4F7CFF
+chat_messagePanelVoiceLock=0xFF4F7CFF
+chat_messagePanelVoiceLockBackground=0xFFF7F9FC
+chat_messagePanelVoicePressed=0xFF4F7CFF
+chat_messagePanelVoiceShadow=0x1A111827
+chat_messagePanelVoiceDelete=0xFFFF3B30
+chat_messagePanelVoiceBackground=0xFFF7F9FC
+chat_messagePanelVoiceDuration=0xFF4F7CFF
+chat_recordedVoiceBackground=0xFF4F7CFF
+chat_recordedVoiceDot=0xFFFF3B30
+
+// ── FAB / floating buttons ───────────────────────────────────────────────────
+chat_goDownButton=0xFFFFFFFF
+chat_goDownButtonIcon=0xFF4F7CFF
+chat_goDownButtonShadow=0x1A111827
+chat_goDownButtonCounter=0xFF4F7CFF
+chat_goDownButtonCounterBackground=0xFF4F7CFF
+
+// ── Avatar colours ───────────────────────────────────────────────────────────
+avatar_backgroundBlue=0xFF4F7CFF
+avatar_backgroundCyan=0xFF34C9B7
+avatar_backgroundGreen=0xFF34C759
+avatar_backgroundOrange=0xFFFF9F0A
+avatar_backgroundViolet=0xFF7C4DFF
+avatar_backgroundPink=0xFFFF4FA3
+avatar_backgroundRed=0xFFFF3B30
+avatar_backgroundSaved=0xFF4F7CFF
+avatar_backgroundArchived=0xFFD1D5DB
+avatar_text=0xFFFFFFFF
+avatar_backgroundGroup=0xFF628BFF
+avatar_backgroundInGroup=0xFF4F7CFF
+
+// ── Profile / info ────────────────────────────────────────────────────────────
+profile_title=0xFF111827
+profile_status=0xFF4F7CFF
+profile_verifiedBackground=0xFF4F7CFF
+profile_verifiedCheck=0xFFFFFFFF
+profile_adminIcon=0xFF4F7CFF
+
+// ── Dialogs / sheets ──────────────────────────────────────────────────────────
+dialogBackground=0xFFFFFFFF
+dialogBackgroundGray=0xFFF7F9FC
+dialogTextBlack=0xFF111827
+dialogTextGray=0xFF6B7280
+dialogTextGray2=0xFF9CA3AF
+dialogTextBlue=0xFF4F7CFF
+dialogTextBlue2=0xFF4F7CFF
+dialogTextBlue3=0xFF4F7CFF
+dialogTextBlue4=0xFF4F7CFF
+dialogTextRed=0xFFFF3B30
+dialogTextRed2=0xFFFF3B30
+dialogButton=0xFF4F7CFF
+dialogButtonSelector=0xFFF2F5FA
+dialogIcon=0xFF4F7CFF
+dialogCheckedIcon=0xFF4F7CFF
+dialogScrollGlow=0xFF4F7CFF
+dialogInputField=0xFFE5E7EB
+dialogInputFieldActivated=0xFF4F7CFF
+dialogGrayLine=0xFFE5E7EB
+dialogTopBackground=0xFFFFFFFF
+
+// ── Progress / loading ────────────────────────────────────────────────────────
+progressCircle=0xFF4F7CFF
+
+// ── Checkboxes & switches ─────────────────────────────────────────────────────
+checkboxSquareBackground=0xFF4F7CFF
+checkboxSquareCheck=0xFFFFFFFF
+checkboxSquareDisabled=0xFFD1D5DB
+checkboxSquareUnchecked=0xFFD1D5DB
+radioBackground=0xFFD1D5DB
+radioBackgroundChecked=0xFF4F7CFF
+switchThumb=0xFFFFFFFF
+switchThumbChecked=0xFFFFFFFF
+switchTrack=0xFFD1D5DB
+switchTrackChecked=0xFF4F7CFF
+switchTrackBlue=0xFF4F7CFF
+switchTrackBlueThumb=0xFFFFFFFF
+switchTrackBlueThumbIcon=0xFF4F7CFF
+
+// ── Slider ───────────────────────────────────────────────────────────────────
+player_progressBackground=0xFFE5E7EB
+player_progressCachedBackground=0xFFD1D5DB
+player_progress=0xFF4F7CFF
+player_time=0xFF6B7280
+
+// ── Bottom navigation ─────────────────────────────────────────────────────────
+navigationBar=0xFFFFFFFF
+navigationBarDivider=0xFFE5E7EB
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+// Light status bar (dark icons on light background)
+key_statusBarColor=0xFFF7F9FC
+
+// ── Stickers & media ──────────────────────────────────────────────────────────
+stickers_menu=0xFF6B7280
+stickers_menuSelector=0xFFF2F5FA
+
+// ── Context menu ─────────────────────────────────────────────────────────────
+contextProgressInner1=0xFFE5E7EB
+contextProgressInner2=0xFFD1D5DB
+contextProgressInner3=0xFFE5E7EB
+contextProgressOuter1=0xFF4F7CFF
+contextProgressOuter2=0xFF628BFF
+contextProgressOuter3=0xFF4F7CFF
+
+// ── Calls ────────────────────────────────────────────────────────────────────
+calls_callReceivedGreenIcon=0xFF34C759
+calls_callReceivedRedIcon=0xFFFF3B30
+
+// ── Location ─────────────────────────────────────────────────────────────────
+location_markerX=0xFF4F7CFF
+location_placeLocationBackground=0xFF4F7CFF
+location_actionIcon=0xFF4F7CFF
+
+// ── Stats & premium ──────────────────────────────────────────────────────────
+premiumGradient0=0xFF4F7CFF
+premiumGradient1=0xFF628BFF
+premiumGradient2=0xFF7B9CFF
+premiumButtonBackground=0xFF4F7CFF
+premiumButtonForeground=0xFFFFFFFF
+premiumStarsForeground=0xFFFFFFFF

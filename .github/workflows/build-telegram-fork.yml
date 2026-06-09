@@ -1,0 +1,93 @@
+name: Build AMN3ZIA (Telegram Fork)
+
+# Builds the official Telegram Android source with AMN3ZIA branding applied.
+# This guarantees 100% Telegram UX/feature parity by construction —
+# we never rewrite Telegram, we only patch names and colours.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'patches/**'
+      - '.github/workflows/build-telegram-fork.yml'
+
+env:
+  # Telegram Android tag to build from. Update when a new Telegram release lands.
+  TG_TAG: master
+
+jobs:
+  build-fork:
+    name: Build APK (Telegram fork + AMN3ZIA branding)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      # ── 1. Checkout THIS repo (contains patches/) ─────────────────────────
+      - name: Checkout amn3zia repo
+        uses: actions/checkout@v4
+        with:
+          path: amn3zia
+
+      # ── 2. Shallow-clone official Telegram Android ─────────────────────────
+      - name: Clone Telegram Android (shallow)
+        run: |
+          git clone --depth=1 --branch "$TG_TAG" \
+            https://github.com/DrKLO/Telegram tg-src
+          echo "Telegram HEAD: $(git -C tg-src rev-parse --short HEAD)"
+
+      # ── 3. JDK 17 ─────────────────────────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ── 4. NDK (Telegram requires r21e) ───────────────────────────────────
+      - name: Install NDK r21e
+        run: |
+          ANDROID_SDK=$ANDROID_HOME
+          echo "SDK: $ANDROID_SDK"
+          $ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;21.4.7075529" \
+            "cmake;3.18.1" \
+            --sdk_root="$ANDROID_SDK" || true
+          # Set ANDROID_NDK_HOME for the build
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK/ndk/21.4.7075529" >> $GITHUB_ENV
+          echo "NDK_HOME=$ANDROID_SDK/ndk/21.4.7075529" >> $GITHUB_ENV
+
+      # ── 5. Apply AMN3ZIA branding patches ─────────────────────────────────
+      - name: Apply AMN3ZIA branding
+        env:
+          TELEGRAM_API_ID:   ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          bash amn3zia/patches/apply-branding.sh tg-src \
+            "$TELEGRAM_API_ID" "$TELEGRAM_API_HASH"
+
+      # ── 6. Gradle cache ───────────────────────────────────────────────────
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: tg-fork-gradle-${{ hashFiles('tg-src/**/*.gradle*') }}
+          restore-keys: tg-fork-gradle-
+
+      # ── 7. Build debug APK ────────────────────────────────────────────────
+      - name: Build debug APK
+        working-directory: tg-src
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleAfatDebug \
+            -Pandroid.ndkVersion=21.4.7075529 \
+            --no-daemon --stacktrace 2>&1 | tail -200
+
+      # ── 8. Upload APK artifact ────────────────────────────────────────────
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: amn3zia-fork-debug
+          path: |
+            tg-src/TMessagesProj/build/outputs/apk/**/*.apk
+          retention-days: 14

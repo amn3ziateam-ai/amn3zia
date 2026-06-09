@@ -14,23 +14,30 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Telegram-style avatar palette — each chat/user gets a deterministic color
-private val avatarColors = listOf(
-    Color(0xFF2CA5E0), Color(0xFF45B2C4), Color(0xFF7B6FCF),
-    Color(0xFF3D9F69), Color(0xFFD46B7D), Color(0xFF5B7EBF),
-    Color(0xFFE07B39), Color(0xFF9E6BAD),
+// Deterministic Telegram-style avatar colours (light-friendly, saturated)
+private val AVATAR_COLORS = listOf(
+    Color(0xFF4F7CFF),  // AMN3ZIA blue
+    Color(0xFF34C9B7),  // teal
+    Color(0xFF34C759),  // green
+    Color(0xFFFF9F0A),  // orange
+    Color(0xFF7C4DFF),  // violet
+    Color(0xFFFF4FA3),  // pink
+    Color(0xFFFF5722),  // deep orange
+    Color(0xFF00BCD4),  // cyan
+    Color(0xFF4CAF50),  // mid-green
+    Color(0xFF9C27B0),  // purple
 )
 
 private fun avatarColor(title: String): Color =
-    avatarColors[(title.firstOrNull()?.code ?: 0) % avatarColors.size]
+    AVATAR_COLORS[(title.firstOrNull()?.code ?: 0) % AVATAR_COLORS.size]
 
 private fun initials(title: String): String {
     val words = title.trim().split(" ").filter { it.isNotEmpty() }
     return when {
-        words.size >= 2 -> "${words[0].first().uppercaseChar()}${words[1].first().uppercaseChar()}"
+        words.size >= 2       -> "${words[0].first().uppercaseChar()}${words[1].first().uppercaseChar()}"
         words.size == 1 && words[0].length >= 2 -> words[0].take(2).uppercase()
-        words.size == 1 -> words[0].first().uppercaseChar().toString()
-        else -> "?"
+        words.size == 1       -> words[0].first().uppercaseChar().toString()
+        else                  -> "?"
     }
 }
 

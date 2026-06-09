@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.amn3zia.app.ui.theme.TgColors
+
+// iOS-style calculator — identical appearance to the system calculator.
+// Entering the secret sequence (default "1337=") unlocks AMN3ZIA.
 
 private val BUTTONS = listOf(
     listOf("AC", "+/-", "%", "÷"),
@@ -24,13 +27,12 @@ private val BUTTONS = listOf(
     listOf("",   "0",  ".",  "="),
 )
 
-/** Secret unlock sequence: default "1337=" — can be customised in settings */
 private const val SECRET = "1337="
 
 @Composable
 fun CalculatorScreen(onUnlock: () -> Unit) {
     var display by remember { mutableStateOf("0") }
-    var entry by remember { mutableStateOf("") }
+    var entry   by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -43,22 +45,22 @@ fun CalculatorScreen(onUnlock: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 24.dp, vertical = 12.dp),
             contentAlignment = Alignment.BottomEnd,
         ) {
             Text(
                 text = display,
                 color = Color.White,
-                fontSize = if (display.length > 9) 44.sp else 72.sp,
+                fontSize = if (display.length > 9) 48.sp else 72.sp,
                 fontWeight = FontWeight.Thin,
                 textAlign = TextAlign.End,
-                maxLines = 2,
+                maxLines = 1,
             )
         }
 
-        // Buttons
+        // Button grid
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 20.dp),
+            modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             BUTTONS.forEach { row ->
@@ -67,27 +69,20 @@ fun CalculatorScreen(onUnlock: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     row.forEach { key ->
-                        val isWide = key == "0"
                         CalcButton(
                             label = key,
-                            isWide = isWide,
-                            modifier = Modifier.weight(if (isWide) 2f else 1f),
-                            onClick = {
-                                if (key.isEmpty()) return@CalcButton
-                                entry += key
-                                // Check secret
-                                if (entry.endsWith(SECRET)) {
-                                    onUnlock()
-                                    return@CalcButton
-                                }
-                                // Basic display logic
-                                when (key) {
-                                    "AC" -> { display = "0"; entry = "" }
-                                    "=" -> { display = evalSimple(entry.dropLast(1)); entry = "" }
-                                    else -> { display = if (display == "0" && key.all { it.isDigit() }) key else display + key }
-                                }
-                            },
-                        )
+                            isWide = key == "0",
+                            modifier = Modifier.weight(if (key == "0") 2f else 1f),
+                        ) {
+                            if (key.isEmpty()) return@CalcButton
+                            entry += key
+                            if (entry.endsWith(SECRET)) { onUnlock(); return@CalcButton }
+                            when (key) {
+                                "AC" -> { display = "0"; entry = "" }
+                                "="  -> { display = evalSimple(entry.dropLast(1)); entry = "" }
+                                else -> display = if (display == "0" && key.all { it.isDigit() }) key else display + key
+                            }
+                        }
                     }
                 }
             }
@@ -97,21 +92,21 @@ fun CalculatorScreen(onUnlock: () -> Unit) {
 
 @Composable
 private fun CalcButton(label: String, isWide: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val isOp = label in listOf("÷", "×", "−", "+", "=")
-    val isTop = label in listOf("AC", "+/-", "%")
+    val isOp  = label in listOf("÷", "×", "−", "+", "=")
+    val isTop  = label in listOf("AC", "+/-", "%")
     val bg = when {
         label.isEmpty() -> Color.Transparent
-        isOp -> Color(0xFFFF9F0A)
-        isTop -> Color(0xFF636366)
-        else -> Color(0xFF1C1C1E)
+        isOp            -> Color(0xFFFF9F0A)
+        isTop           -> Color(0xFF636366)
+        else            -> Color(0xFF333336)
     }
     Box(
         modifier = modifier
             .height(80.dp)
-            .clip(if (isWide) androidx.compose.foundation.shape.RoundedCornerShape(40.dp) else CircleShape)
+            .clip(if (isWide) RoundedCornerShape(40.dp) else CircleShape)
             .background(bg)
             .clickable(enabled = label.isNotEmpty(), onClick = onClick),
-        contentAlignment = Alignment.CenterStart.takeIf { isWide } ?: Alignment.Center,
+        contentAlignment = if (isWide) Alignment.CenterStart else Alignment.Center,
     ) {
         Text(
             text = label,
@@ -123,27 +118,10 @@ private fun CalcButton(label: String, isWide: Boolean, modifier: Modifier, onCli
     }
 }
 
-/** Very simplified expression evaluator for display realism */
-private fun evalSimple(expr: String): String {
-    return try {
-        val ops = listOf("÷", "×", "−", "+")
-        for (op in ops) {
-            if (expr.contains(op)) {
-                val parts = expr.split(op)
-                val a = parts[0].toDouble()
-                val b = parts[1].toDouble()
-                val result = when (op) {
-                    "÷" -> a / b
-                    "×" -> a * b
-                    "−" -> a - b
-                    "+" -> a + b
-                    else -> 0.0
-                }
-                return if (result % 1.0 == 0.0) result.toLong().toString() else result.toString()
-            }
-        }
-        expr
-    } catch (e: Exception) {
-        "Error"
-    }
-}
+private fun evalSimple(expr: String): String = try {
+    listOf("÷","×","−","+").firstOrNull { expr.contains(it) }?.let { op ->
+        val (a, b) = expr.split(op).map { it.toDouble() }
+        val r = when (op) { "÷" -> a/b; "×" -> a*b; "−" -> a-b; else -> a+b }
+        if (r % 1.0 == 0.0) r.toLong().toString() else r.toString()
+    } ?: expr
+} catch (e: Exception) { "Error" }

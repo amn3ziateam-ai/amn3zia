@@ -8,7 +8,9 @@ on:
       - '.github/workflows/build-telegram-fork.yml'
 
 env:
-  TG_TAG: master
+  # Pin to a specific Telegram commit so NDK cache always hits.
+  # Update this only when you intentionally want a newer Telegram version.
+  TG_TAG: 9fea726
   NDK_VERSION: 27.2.12479018
 
 jobs:
@@ -78,7 +80,8 @@ jobs:
             tg-src/TMessagesProj/build/intermediates/stripped_native_libs
             tg-src/TMessagesProj/build/intermediates/merged_native_libs
             tg-src/TMessagesProj/libs
-          key: tg-ndk-${{ env.NDK_VERSION }}-${{ hashFiles('tg-src/TMessagesProj/jni/**', 'tg-src/TMessagesProj/jni/CMakeLists.txt') }}
+          # Key = NDK version + pinned TG commit → stable, always hits after first build
+          key: tg-ndk-${{ env.NDK_VERSION }}-${{ env.TG_TAG }}
           restore-keys: tg-ndk-${{ env.NDK_VERSION }}-
 
       # ── 8. Build APK ──────────────────────────────────────────────────────

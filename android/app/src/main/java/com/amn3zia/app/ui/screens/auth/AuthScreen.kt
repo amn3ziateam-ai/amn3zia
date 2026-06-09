@@ -1,77 +1,87 @@
 package com.amn3zia.app.ui.screens.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.amn3zia.app.core.tdlib.AuthState
+import com.amn3zia.app.ui.theme.TgColors
 
-/** Mirrors TDLib's authorization-state machine exactly — each state gets its own input step. */
 @Composable
 fun AuthScreen(onAuthenticated: () -> Unit) {
     val viewModel: AuthViewModel = viewModel()
     val state by viewModel.authState.collectAsState()
     val error by viewModel.error.collectAsState()
-    val debugLog by viewModel.debugLog.collectAsState()
 
     LaunchedEffect(state) {
         if (state is AuthState.Ready) onAuthenticated()
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(TgColors.Bg),
+        contentAlignment = Alignment.Center,
     ) {
-        Text("AMN3ZIA", fontWeight = FontWeight.ExtraBold, fontSize = 28.sp, letterSpacing = 4.sp)
-        Spacer(Modifier.height(8.dp))
-        Text("Privacy-first Telegram client", fontSize = 13.sp)
-        Spacer(Modifier.height(40.dp))
-
-        when (val s = state) {
-            is AuthState.WaitingForPhoneNumber -> PhoneStep(onSubmit = viewModel::submitPhoneNumber)
-            is AuthState.WaitingForCode -> CodeStep(onSubmit = viewModel::submitCode)
-            is AuthState.WaitingForPassword -> PasswordStep(hint = s.hint, onSubmit = viewModel::submitPassword)
-            is AuthState.WaitingForRegistration -> RegistrationStep(onSubmit = viewModel::register)
-            is AuthState.Initializing -> {
-                CircularProgressIndicator()
-                DebugTrace(debugLog)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+        ) {
+            // Logo
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(TgColors.Blue),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
             }
-            else -> {
-                CircularProgressIndicator()
-                DebugTrace(debugLog)
+            Spacer(Modifier.height(20.dp))
+            Text(
+                "AMN3ZIA",
+                color = TgColors.TextPrimary,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 28.sp,
+                letterSpacing = 4.sp,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text("Privacy-first Telegram client", color = TgColors.TextSecondary, fontSize = 13.sp)
+            Spacer(Modifier.height(40.dp))
+
+            when (val s = state) {
+                is AuthState.WaitingForPhoneNumber -> PhoneStep(onSubmit = viewModel::submitPhoneNumber)
+                is AuthState.WaitingForCode        -> CodeStep(onSubmit = viewModel::submitCode)
+                is AuthState.WaitingForPassword    -> PasswordStep(hint = s.hint, onSubmit = viewModel::submitPassword)
+                is AuthState.WaitingForRegistration -> RegistrationStep(onSubmit = viewModel::register)
+                else -> {
+                    CircularProgressIndicator(color = TgColors.Blue, strokeWidth = 2.5.dp)
+                    Spacer(Modifier.height(12.dp))
+                    Text("Connecting…", color = TgColors.TextHint, fontSize = 13.sp)
+                }
             }
-        }
 
-        error?.let {
-            Spacer(Modifier.height(16.dp))
-            Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
-        }
-    }
-}
-
-/**
- * TEMPORARY: shows TdClient's raw lifecycle trace directly on screen.
- * adb/logcat is unreliable on the test emulator, so this is the fastest way
- * to see exactly where TDLib initialization is stuck. Remove once the
- * launch-hang investigation is done.
- */
-@Composable
-private fun DebugTrace(lines: List<String>) {
-    Spacer(Modifier.height(24.dp))
-    Text("debug trace:", fontSize = 11.sp, color = Color.Gray)
-    Spacer(Modifier.height(4.dp))
-    LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
-        items(lines) { line ->
-            Text(line, fontSize = 10.sp, color = Color.Gray)
+            error?.let {
+                Spacer(Modifier.height(16.dp))
+                Text(it, color = TgColors.Red, fontSize = 13.sp)
+            }
         }
     }
 }
@@ -80,8 +90,18 @@ private fun DebugTrace(lines: List<String>) {
 private fun PhoneStep(onSubmit: (String) -> Unit) {
     var phone by remember { mutableStateOf("") }
     StepColumn {
-        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone number (+1...)") }, singleLine = true)
-        Button(onClick = { onSubmit(phone.trim()) }, enabled = phone.isNotBlank()) { Text("Continue") }
+        Text("Your Phone Number", color = TgColors.TextPrimary, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Spacer(Modifier.height(4.dp))
+        Text("Enter your number in international format", color = TgColors.TextSecondary, fontSize = 13.sp)
+        Spacer(Modifier.height(16.dp))
+        TgTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = "Phone (+1...)",
+            keyboardType = KeyboardType.Phone,
+        )
+        Spacer(Modifier.height(12.dp))
+        TgButton("Next") { onSubmit(phone.trim()) }
     }
 }
 
@@ -89,9 +109,13 @@ private fun PhoneStep(onSubmit: (String) -> Unit) {
 private fun CodeStep(onSubmit: (String) -> Unit) {
     var code by remember { mutableStateOf("") }
     StepColumn {
-        Text("Enter the code Telegram sent you", fontSize = 13.sp)
-        OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("Code") }, singleLine = true)
-        Button(onClick = { onSubmit(code.trim()) }, enabled = code.isNotBlank()) { Text("Verify") }
+        Text("Enter Code", color = TgColors.TextPrimary, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Spacer(Modifier.height(4.dp))
+        Text("Telegram sent you a verification code", color = TgColors.TextSecondary, fontSize = 13.sp)
+        Spacer(Modifier.height(16.dp))
+        TgTextField(value = code, onValueChange = { code = it }, label = "Code", keyboardType = KeyboardType.Number)
+        Spacer(Modifier.height(12.dp))
+        TgButton("Verify") { onSubmit(code.trim()) }
     }
 }
 
@@ -99,12 +123,19 @@ private fun CodeStep(onSubmit: (String) -> Unit) {
 private fun PasswordStep(hint: String?, onSubmit: (String) -> Unit) {
     var password by remember { mutableStateOf("") }
     StepColumn {
-        Text("Two-step verification password" + (hint?.takeIf { it.isNotBlank() }?.let { " (hint: $it)" } ?: ""), fontSize = 13.sp)
-        OutlinedTextField(
-            value = password, onValueChange = { password = it }, label = { Text("Password") }, singleLine = true,
-            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        Text("Two-Step Password", color = TgColors.TextPrimary, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Spacer(Modifier.height(4.dp))
+        if (!hint.isNullOrBlank()) Text("Hint: $hint", color = TgColors.TextSecondary, fontSize = 12.sp)
+        Spacer(Modifier.height(16.dp))
+        TgTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = "Password",
+            keyboardType = KeyboardType.Password,
+            isPassword = true,
         )
-        Button(onClick = { onSubmit(password) }, enabled = password.isNotBlank()) { Text("Unlock") }
+        Spacer(Modifier.height(12.dp))
+        TgButton("Sign In") { onSubmit(password) }
     }
 }
 
@@ -113,14 +144,69 @@ private fun RegistrationStep(onSubmit: (String, String) -> Unit) {
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     StepColumn {
-        Text("Looks like you're new — create your Telegram profile", fontSize = 13.sp)
-        OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("First name") }, singleLine = true)
-        OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Last name") }, singleLine = true)
-        Button(onClick = { onSubmit(firstName.trim(), lastName.trim()) }, enabled = firstName.isNotBlank()) { Text("Create account") }
+        Text("Create Account", color = TgColors.TextPrimary, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        Spacer(Modifier.height(4.dp))
+        Text("You don't have a Telegram account yet", color = TgColors.TextSecondary, fontSize = 13.sp)
+        Spacer(Modifier.height(16.dp))
+        TgTextField(value = firstName, onValueChange = { firstName = it }, label = "First Name")
+        Spacer(Modifier.height(8.dp))
+        TgTextField(value = lastName, onValueChange = { lastName = it }, label = "Last Name")
+        Spacer(Modifier.height(12.dp))
+        TgButton("Register", enabled = firstName.isNotBlank()) { onSubmit(firstName.trim(), lastName.trim()) }
+    }
+}
+
+// ── Shared input components ───────────────────────────────────────────────────
+
+@Composable
+private fun TgTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    isPassword: Boolean = false,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label, color = TgColors.TextHint, fontSize = 14.sp) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = TgColors.TextPrimary,
+            unfocusedTextColor = TgColors.TextPrimary,
+            focusedBorderColor = TgColors.Blue,
+            unfocusedBorderColor = TgColors.TextHint,
+            focusedContainerColor = TgColors.BgSecondary,
+            unfocusedContainerColor = TgColors.BgSecondary,
+            cursorColor = TgColors.Blue,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun TgButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = TgColors.Blue,
+            disabledContainerColor = TgColors.BgTertiary,
+        ),
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
     }
 }
 
 @Composable
 private fun StepColumn(content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally, content = content)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content,
+    )
 }

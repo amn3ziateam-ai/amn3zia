@@ -89,6 +89,11 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.lifecycle:lifecycle-process:2.8.1")
 
+    // Biometric authentication (PIN / fingerprint / face)
+    implementation("androidx.biometric:biometric:1.1.0")
+    // Persistent settings (DataStore Preferences)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
     // Secure local storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")

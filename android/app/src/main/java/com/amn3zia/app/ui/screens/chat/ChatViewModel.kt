@@ -25,6 +25,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _draft = MutableStateFlow("")
     val draft: StateFlow<String> = _draft.asStateFlow()
 
+    private val _chatTitle = MutableStateFlow("Chat")
+    val chatTitle: StateFlow<String> = _chatTitle.asStateFlow()
+
     fun open(chatId: Long) {
         if (this.chatId == chatId) return
         this.chatId = chatId

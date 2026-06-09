@@ -1,9 +1,5 @@
 name: Build AMN3ZIA (Telegram Fork)
 
-# Builds the official Telegram Android source with AMN3ZIA branding applied.
-# This guarantees 100% Telegram UX/feature parity by construction —
-# we never rewrite Telegram, we only patch names and colours.
-
 on:
   workflow_dispatch:
   push:
@@ -12,8 +8,8 @@ on:
       - '.github/workflows/build-telegram-fork.yml'
 
 env:
-  # Telegram Android tag to build from. Update when a new Telegram release lands.
   TG_TAG: master
+  NDK_VERSION: 27.2.12479018
 
 jobs:
   build-fork:
@@ -22,18 +18,20 @@ jobs:
     timeout-minutes: 120
 
     steps:
-      # ── 1. Checkout THIS repo (contains patches/) ─────────────────────────
+      # ── 1. Checkout patches repo ───────────────────────────────────────────
       - name: Checkout amn3zia repo
         uses: actions/checkout@v4
         with:
           path: amn3zia
 
-      # ── 2. Shallow-clone official Telegram Android ─────────────────────────
+      # ── 2. Shallow-clone Telegram Android ─────────────────────────────────
       - name: Clone Telegram Android (shallow)
         run: |
           git clone --depth=1 --branch "$TG_TAG" \
             https://github.com/DrKLO/Telegram tg-src
-          echo "Telegram HEAD: $(git -C tg-src rev-parse --short HEAD)"
+          TG_COMMIT=$(git -C tg-src rev-parse --short HEAD)
+          echo "Telegram HEAD: $TG_COMMIT"
+          echo "TG_COMMIT=$TG_COMMIT" >> $GITHUB_ENV
 
       # ── 3. JDK 17 ─────────────────────────────────────────────────────────
       - name: Set up JDK 17
@@ -42,19 +40,14 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # ── 4. NDK 27.2 (matches Telegram master ndkVersion) ──────────────────
+      # ── 4. NDK 27.2 ───────────────────────────────────────────────────────
       - name: Install NDK 27.2
         run: |
-          ANDROID_SDK=$ANDROID_HOME
-          echo "SDK: $ANDROID_SDK"
-          $ANDROID_SDK/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;27.2.12479018" \
-            --sdk_root="$ANDROID_SDK"
-          echo "ANDROID_NDK_HOME=$ANDROID_SDK/ndk/27.2.12479018" >> $GITHUB_ENV
-          echo "NDK_HOME=$ANDROID_SDK/ndk/27.2.12479018" >> $GITHUB_ENV
-          ls "$ANDROID_SDK/ndk/27.2.12479018" | head -5
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "ndk;$NDK_VERSION" --sdk_root="$ANDROID_HOME"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VERSION" >> $GITHUB_ENV
 
-      # ── 5. Apply AMN3ZIA branding patches ─────────────────────────────────
+      # ── 5. Apply AMN3ZIA branding + feature patches ────────────────────────
       - name: Apply AMN3ZIA branding
         env:
           TELEGRAM_API_ID:   ${{ secrets.TELEGRAM_API_ID }}
@@ -63,52 +56,54 @@ jobs:
           bash amn3zia/patches/apply-branding.sh tg-src \
             "$TELEGRAM_API_ID" "$TELEGRAM_API_HASH"
 
-      # ── 6. Gradle cache ───────────────────────────────────────────────────
-      - name: Cache Gradle
+      # ── 6. Gradle dependencies cache (~/.gradle) ──────────────────────────
+      - name: Cache Gradle dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: tg-fork-gradle-${{ hashFiles('tg-src/**/*.gradle*') }}
-          restore-keys: tg-fork-gradle-
+          key: tg-gradle-deps-${{ hashFiles('tg-src/**/*.gradle*', 'tg-src/gradle.properties') }}
+          restore-keys: tg-gradle-deps-
 
-      # ── 7. Build debug APK ────────────────────────────────────────────────
-      # TMessagesProj is a LIBRARY (.aar), TMessagesProj_App is the APP (.apk).
-      # pipefail ensures Gradle failures are not masked by the tee pipe.
+      # ── 7. NDK native build cache (.cxx compiled .so files) ───────────────
+      # Key: NDK version + CMakeLists hash. If only Java/patches change,
+      # this cache hits → NDK step is skipped → build takes ~5 min not 40 min.
+      - name: Cache NDK native build
+        uses: actions/cache@v4
+        with:
+          path: |
+            tg-src/TMessagesProj/.cxx
+            tg-src/TMessagesProj/build/intermediates/cmake
+            tg-src/TMessagesProj/build/intermediates/stripped_native_libs
+            tg-src/TMessagesProj/build/intermediates/merged_native_libs
+            tg-src/TMessagesProj/libs
+          key: tg-ndk-${{ env.NDK_VERSION }}-${{ hashFiles('tg-src/TMessagesProj/jni/**', 'tg-src/TMessagesProj/jni/CMakeLists.txt') }}
+          restore-keys: tg-ndk-${{ env.NDK_VERSION }}-
+
+      # ── 8. Build APK ──────────────────────────────────────────────────────
       - name: Build debug APK
         working-directory: tg-src
         run: |
           set -o pipefail
           chmod +x gradlew
           ./gradlew :TMessagesProj_App:assembleAfatDebug \
-            -Pandroid.ndkVersion=27.2.12479018 \
+            -Pandroid.ndkVersion=$NDK_VERSION \
             --no-daemon --stacktrace \
             2>&1 | tee /tmp/gradle_build.log
-          echo "=== Last 50 lines of Gradle output ==="
-          tail -50 /tmp/gradle_build.log
+          echo "=== Last 30 lines ==="
+          tail -30 /tmp/gradle_build.log
 
-      # ── 8. Find APK — diagnostic output ───────────────────────────────────
+      # ── 9. Debug: find APKs ────────────────────────────────────────────────
       - name: Find built APKs
         if: always()
-        run: |
-          echo "=== All APK files anywhere under tg-src ==="
-          find tg-src -name "*.apk" -type f 2>/dev/null || echo "(none)"
-          echo ""
-          echo "=== TMessagesProj_App/build/outputs tree ==="
-          find tg-src/TMessagesProj_App/build/outputs -type f 2>/dev/null | head -40 \
-            || echo "(directory does not exist)"
-          echo ""
-          echo "=== Full build/outputs tree (all modules) ==="
-          find tg-src -path "*/build/outputs" -type d 2>/dev/null \
-            | xargs -I{} find {} -name "*.apk" 2>/dev/null || echo "(no apks)"
+        run: find tg-src -name "*.apk" -type f 2>/dev/null || echo "(none)"
 
-      # ── 9. Upload APK ─────────────────────────────────────────────────────
+      # ── 10. Upload APK ─────────────────────────────────────────────────────
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: amn3zia-fork-debug
-          # afat flavor debug APK: TMessagesProj_App/build/outputs/apk/afat/debug/app.apk
           path: tg-src/TMessagesProj_App/build/outputs/apk/afat/debug/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30

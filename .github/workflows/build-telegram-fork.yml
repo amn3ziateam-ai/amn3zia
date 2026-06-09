@@ -27,13 +27,12 @@ jobs:
           path: amn3zia
 
       # ── 2. Shallow-clone Telegram Android ─────────────────────────────────
-      - name: Clone Telegram Android (shallow)
+      - name: Clone Telegram Android (shallow, pinned commit)
         run: |
-          git clone --depth=1 --branch "$TG_TAG" \
-            https://github.com/DrKLO/Telegram tg-src
-          TG_COMMIT=$(git -C tg-src rev-parse --short HEAD)
-          echo "Telegram HEAD: $TG_COMMIT"
-          echo "TG_COMMIT=$TG_COMMIT" >> $GITHUB_ENV
+          # Clone master then checkout the pinned commit for stable NDK cache
+          git clone --depth=50 https://github.com/DrKLO/Telegram tg-src
+          git -C tg-src checkout "$TG_TAG"
+          echo "Telegram HEAD: $(git -C tg-src rev-parse --short HEAD)"
 
       # ── 3. JDK 17 ─────────────────────────────────────────────────────────
       - name: Set up JDK 17

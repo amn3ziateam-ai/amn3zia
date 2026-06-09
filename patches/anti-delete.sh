@@ -1,60 +1,42 @@
 #!/usr/bin/env bash
 # anti-delete.sh  <telegram-src-dir>
 #
-# AMN3ZIA — Anti-Delete patch
-# Keeps messages that were remotely deleted visible with a "Deleted" marker.
+# AMN3ZIA — Anti-Delete patch (v2)
 #
-# Injection point: MessagesController.java → deleteMessages() overloads
-#   Real param names: messages (ArrayList<Integer>), dialogId (long)
-#   (NOT "ids"/"dialog_id" — those were wrong; real source uses "messages"/"dialogId")
+# Strategy: intercept deleteMessages() ONLY when cacheOnly=true, which means
+# the deletion was pushed by the server (someone else deleted the message).
+# We return early → message stays in local SQLite → stays visible in chat.
+# User-initiated deletes (cacheOnly=false) still work normally.
 set -euo pipefail
 
 TG="${1:-}"
 [ -z "$TG" ] || [ ! -d "$TG" ] && { echo "Usage: $0 <telegram-src-dir>"; exit 1; }
 
 MSRC="$TG/TMessagesProj/src/main/java/org/telegram"
-echo "  [AD] Injecting Anti-Delete patch..."
+echo "  [AD] Injecting Anti-Delete patch v2..."
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. AmnAntiDelete.java
+# 1. AmnAntiDelete.java  (minimal — just logging; actual prevention is via return)
 # ─────────────────────────────────────────────────────────────────────────────
 mkdir -p "$MSRC/messenger"
 cat > "$MSRC/messenger/AmnAntiDelete.java" << 'JAVA'
 package org.telegram.messenger;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.Log;
-
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * AMN3ZIA — Anti-Delete
- * Records deleted message IDs so the UI can show them with a "Deleted" marker.
+ * Messages deleted by others are kept in local DB by returning early in deleteMessages().
  */
 public class AmnAntiDelete {
+    private static final String TAG = "AmnAntiDelete";
 
-    private static final String TAG   = "AmnAntiDelete";
-    private static final String PREFS = "amn_deleted_msgs";
-
-    public static void markDeleted(Context ctx, long dialogId, ArrayList<Integer> messages) {
-        if (ctx == null || messages == null || messages.isEmpty()) return;
-        SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String key = "d_" + dialogId;
-        Set<String> cur = new HashSet<>(sp.getStringSet(key, Collections.emptySet()));
-        for (int id : messages) cur.add(String.valueOf(id));
-        sp.edit().putStringSet(key, cur).apply();
-        Log.d(TAG, "Marked " + messages.size() + " msgs deleted in " + dialogId);
-    }
-
-    public static boolean isDeleted(Context ctx, long dialogId, int msgId) {
-        if (ctx == null) return false;
-        SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        return sp.getStringSet("d_" + dialogId, Collections.emptySet())
-                 .contains(String.valueOf(msgId));
+    /** Called when we intercept a server-pushed deletion. Just logs. */
+    public static void onIntercepted(long dialogId, ArrayList<Integer> messages) {
+        if (messages == null) return;
+        Log.i(TAG, "Anti-delete: kept " + messages.size() + " msg(s) in dialog " + dialogId);
     }
 }
 JAVA
@@ -62,9 +44,8 @@ echo "    Created AmnAntiDelete.java"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Patch MessagesController.java
-#    Inject at the TOP of the first full deleteMessages() overload body.
-#    Real param names confirmed from source: messages (ArrayList<Integer>), dialogId (long)
-#    Anchor: the most-complete overload signature (unique string in file)
+#    Target ONLY the 12-param overload (has 'movedToScheduled' — unique identifier).
+#    Inject at top: if cacheOnly==true → record + return (don't delete from DB).
 # ─────────────────────────────────────────────────────────────────────────────
 MC="$MSRC/messenger/MessagesController.java"
 if [ -f "$MC" ]; then
@@ -76,24 +57,21 @@ path = sys.argv[1]
 with open(path, 'r', encoding='utf-8') as f:
     src = f.read()
 
-# NOTE: AmnAntiDelete is in the same package (org.telegram.messenger) — no import needed
+# Match ONLY the 12-param overload: identified by 'movedToScheduled' in signature.
+# Regex captures: entire signature up to and including the opening brace.
+pattern = re.compile(
+    r'(public\s+void\s+deleteMessages\s*\([^)]*boolean\s+movedToScheduled[^)]*\)\s*\{)',
+    re.DOTALL
+)
 
-# Find all deleteMessages method openings and inject at the start of each body.
-# Param names confirmed: `ArrayList<Integer> messages` and `long dialogId`
-# We inject after the opening brace of each overload.
 inject_code = (
-    '\n        // AMN3ZIA Anti-Delete: record which messages were deleted\n'
-    '        if (messages != null && !messages.isEmpty()) {\n'
-    '            AmnAntiDelete.markDeleted(ApplicationLoader.applicationContext, dialogId, messages);\n'
+    '\n        // AMN3ZIA Anti-Delete: server-pushed delete (cacheOnly=true) → keep message\n'
+    '        if (cacheOnly && messages != null && !messages.isEmpty()) {\n'
+    '            AmnAntiDelete.onIntercepted(dialogId, messages);\n'
+    '            return;  // Message stays in local DB and remains visible in chat\n'
     '        }\n'
 )
 
-# Pattern: public void deleteMessages(ArrayList<Integer> messages, ...) {
-# We match just the opening brace since signature varies
-pattern = re.compile(
-    r'(public\s+void\s+deleteMessages\s*\([^)]*ArrayList<Integer>\s+messages[^)]*\)\s*\{)',
-    re.DOTALL
-)
 count = 0
 def replace_fn(m):
     global count
@@ -102,13 +80,11 @@ def replace_fn(m):
 
 new_src = pattern.sub(replace_fn, src)
 if count > 0:
-    print(f'    Patched MessagesController.java ({count} deleteMessages overloads)')
+    print(f'    Patched MessagesController.java ({count} overload(s) with anti-delete)')
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(new_src)
 else:
-    print('    WARN: deleteMessages pattern not found in MessagesController.java')
-    new_src = src
-
-with open(path, 'w', encoding='utf-8') as f:
-    f.write(new_src)
+    print('    WARN: movedToScheduled overload not found — anti-delete NOT applied')
 PY
     else
         echo "    MessagesController.java already patched"
@@ -116,13 +92,5 @@ PY
 else
     echo "    WARN: MessagesController.java not found"
 fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. NOTE: ChatMessageCell rendering is skipped here.
-#    The "Deleted" visual marker is drawn by the app at runtime by checking
-#    AmnAntiDelete.isDeleted() — no source patch needed for display.
-#    (ChatMessageCell patch was causing compilation failures and is deferred)
-# ─────────────────────────────────────────────────────────────────────────────
-echo "    Note: ChatMessageCell visual patch deferred (uses runtime check)"
 
 echo "  [AD] Done."

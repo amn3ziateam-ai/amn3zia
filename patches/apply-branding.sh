@@ -128,15 +128,16 @@ fi
 echo "  [5/5] AMN3ZIA feature patches..."
 
 # View Once bypass (save TTL photos/videos before self-destruct)
+# Run with || true so a patch failure does NOT abort the entire build
 if [ -f "$SCRIPT_DIR/anti-view-once.sh" ]; then
-  bash "$SCRIPT_DIR/anti-view-once.sh" "$TG"
+  bash "$SCRIPT_DIR/anti-view-once.sh" "$TG" || echo "    WARN: anti-view-once.sh failed (non-fatal)"
 else
   echo "    WARN: anti-view-once.sh not found"
 fi
 
 # Anti-delete (keep deleted messages visible with "Deleted" marker)
 if [ -f "$SCRIPT_DIR/anti-delete.sh" ]; then
-  bash "$SCRIPT_DIR/anti-delete.sh" "$TG"
+  bash "$SCRIPT_DIR/anti-delete.sh" "$TG" || echo "    WARN: anti-delete.sh failed (non-fatal)"
 else
   echo "    WARN: anti-delete.sh not found"
 fi

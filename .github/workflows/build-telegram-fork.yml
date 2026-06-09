@@ -83,11 +83,19 @@ jobs:
             -Pandroid.ndkVersion=21.4.7075529 \
             --no-daemon --stacktrace 2>&1 | tail -200
 
-      # ── 8. Upload APK artifact ────────────────────────────────────────────
+      # ── 8. Find APK and upload ────────────────────────────────────────────
+      - name: Find built APKs
+        run: |
+          echo "=== APK files produced ==="
+          find tg-src -name "*.apk" 2>/dev/null || echo "(none found)"
+          echo "=== build/outputs tree ==="
+          find tg-src/TMessagesProj/build/outputs -type f 2>/dev/null | head -40 || echo "(empty)"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: amn3zia-fork-debug
-          path: |
-            tg-src/TMessagesProj/build/outputs/apk/**/*.apk
+          # Telegram Android may put APK in afat/debug/ or standalone/debug/
+          path: tg-src/TMessagesProj/build/outputs/apk/
+          if-no-files-found: error
           retention-days: 14

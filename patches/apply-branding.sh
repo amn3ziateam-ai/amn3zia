@@ -125,7 +125,14 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. AMN3ZIA FEATURE PATCHES
 # ─────────────────────────────────────────────────────────────────────────────
-echo "  [5/5] AMN3ZIA feature patches..."
+echo "  [5/6] AMN3ZIA launcher icon..."
+if [ -f "$SCRIPT_DIR/apply-icon.sh" ]; then
+  bash "$SCRIPT_DIR/apply-icon.sh" "$TG" || echo "    WARN: apply-icon.sh failed (non-fatal)"
+else
+  echo "    WARN: apply-icon.sh not found"
+fi
+
+echo "  [6/6] AMN3ZIA feature patches..."
 
 # Main features patch (Ghost Mode, Panic, App Lock, Screen Protect, etc.)
 if [ -f "$SCRIPT_DIR/amn3zia-features.sh" ]; then

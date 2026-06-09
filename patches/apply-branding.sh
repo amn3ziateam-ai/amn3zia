@@ -127,8 +127,14 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 echo "  [5/5] AMN3ZIA feature patches..."
 
+# Main features patch (Ghost Mode, Panic, App Lock, Screen Protect, etc.)
+if [ -f "$SCRIPT_DIR/amn3zia-features.sh" ]; then
+  bash "$SCRIPT_DIR/amn3zia-features.sh" "$TG" || echo "    WARN: amn3zia-features.sh failed (non-fatal)"
+else
+  echo "    WARN: amn3zia-features.sh not found"
+fi
+
 # View Once bypass (save TTL photos/videos before self-destruct)
-# Run with || true so a patch failure does NOT abort the entire build
 if [ -f "$SCRIPT_DIR/anti-view-once.sh" ]; then
   bash "$SCRIPT_DIR/anti-view-once.sh" "$TG" || echo "    WARN: anti-view-once.sh failed (non-fatal)"
 else

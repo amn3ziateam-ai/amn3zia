@@ -1,21 +1,19 @@
 #!/usr/bin/env bash
 # anti-view-once.sh  <telegram-src-dir>
 #
-# AMN3ZIA — View Once Bypass patch (v2)
-#
-# Saves TTL/view-once photos and videos to the gallery (Pictures/AMN3ZIA)
-# using MediaStore API on Android 10+ for proper gallery visibility.
-# Shows a Toast notification so the user knows the file was saved.
+# AMN3ZIA — View Once Bypass v3
+# Only saves TTL media when AmnPrivacySettings.isViewOnce() is true.
+# Uses MediaStore API on Android 10+ for immediate gallery visibility.
 set -euo pipefail
 
 TG="${1:-}"
 [ -z "$TG" ] || [ ! -d "$TG" ] && { echo "Usage: $0 <telegram-src-dir>"; exit 1; }
 
 MSRC="$TG/TMessagesProj/src/main/java/org/telegram"
-echo "  [AVO] Injecting View Once bypass v2..."
+echo "  [AVO] Injecting View Once bypass v3..."
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. AmnAntiViewOnce.java  — MediaStore-aware saver
+# AmnAntiViewOnce.java — MediaStore-aware saver
 # ─────────────────────────────────────────────────────────────────────────────
 mkdir -p "$MSRC/messenger"
 cat > "$MSRC/messenger/AmnAntiViewOnce.java" << 'JAVA'
@@ -44,19 +42,18 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * AMN3ZIA — Anti View Once (v2)
- * Saves TTL / view-once media to Gallery (Pictures/AMN3ZIA) before Telegram destroys it.
- * Uses MediaStore API on Android 10+ so files appear in the gallery immediately.
+ * AMN3ZIA Anti View Once v3 — respects isViewOnce() toggle.
  */
 public class AmnAntiViewOnce {
 
-    private static final String TAG    = "AmnAntiViewOnce";
-    private static final String ALBUM  = "AMN3ZIA";
+    private static final String TAG   = "AmnAntiViewOnce";
+    private static final String ALBUM = "AMN3ZIA";
 
     public static void onFileReady(Context context, File srcFile, TLRPC.MessageMedia media) {
+        // Check toggle first
+        if (!AmnPrivacySettings.isViewOnce(context)) return;
         if (context == null || srcFile == null || !srcFile.exists() || media == null) return;
 
-        // Check TTL (view-once / self-destruct timer)
         int ttl = 0;
         boolean isVideo = false;
         if (media instanceof TLRPC.TL_messageMediaPhoto) {
@@ -73,7 +70,8 @@ public class AmnAntiViewOnce {
                 }
             }
         }
-        if (ttl <= 0) return;  // not a view-once/TTL media
+        // ttl != 0 covers both small values AND 0x7FFFFFFF (single-view)
+        if (ttl == 0) return;
 
         final String ext  = extensionOf(srcFile.getName(), isVideo);
         final String mime = isVideo ? "video/mp4" : "image/jpeg";
@@ -82,51 +80,44 @@ public class AmnAntiViewOnce {
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ — insert directly into MediaStore (appears in gallery)
-                Uri collection = isVideo
+                Uri col = isVideo
                     ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                     : MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-
-                ContentValues values = new ContentValues();
-                values.put(isVideo
-                    ? MediaStore.Video.Media.DISPLAY_NAME
-                    : MediaStore.Images.Media.DISPLAY_NAME, name);
-                values.put(isVideo
-                    ? MediaStore.Video.Media.MIME_TYPE
-                    : MediaStore.Images.Media.MIME_TYPE, mime);
-                values.put(isVideo
-                    ? MediaStore.Video.Media.RELATIVE_PATH
-                    : MediaStore.Images.Media.RELATIVE_PATH,
-                    Environment.DIRECTORY_PICTURES + "/" + ALBUM);
-                values.put(isVideo
-                    ? MediaStore.Video.Media.IS_PENDING
-                    : MediaStore.Images.Media.IS_PENDING, 1);
-
-                Uri itemUri = context.getContentResolver().insert(collection, values);
-                if (itemUri != null) {
-                    try (OutputStream os = context.getContentResolver().openOutputStream(itemUri)) {
+                ContentValues cv = new ContentValues();
+                cv.put(isVideo ? MediaStore.Video.Media.DISPLAY_NAME
+                               : MediaStore.Images.Media.DISPLAY_NAME, name);
+                cv.put(isVideo ? MediaStore.Video.Media.MIME_TYPE
+                               : MediaStore.Images.Media.MIME_TYPE, mime);
+                cv.put(isVideo ? MediaStore.Video.Media.RELATIVE_PATH
+                               : MediaStore.Images.Media.RELATIVE_PATH,
+                       Environment.DIRECTORY_PICTURES + "/" + ALBUM);
+                cv.put(isVideo ? MediaStore.Video.Media.IS_PENDING
+                               : MediaStore.Images.Media.IS_PENDING, 1);
+                Uri uri = context.getContentResolver().insert(col, cv);
+                if (uri != null) {
+                    try (OutputStream os = context.getContentResolver().openOutputStream(uri)) {
                         copyStream(srcFile, os);
                     }
-                    values.clear();
-                    values.put(isVideo
-                        ? MediaStore.Video.Media.IS_PENDING
-                        : MediaStore.Images.Media.IS_PENDING, 0);
-                    context.getContentResolver().update(itemUri, values, null, null);
+                    cv.clear();
+                    cv.put(isVideo ? MediaStore.Video.Media.IS_PENDING
+                                   : MediaStore.Images.Media.IS_PENDING, 0);
+                    context.getContentResolver().update(uri, cv, null, null);
+                    showToast(context, "AMN3ZIA: сохранено в Галерею → " + name);
                     Log.i(TAG, "Saved via MediaStore: " + name);
-                    showToast(context, "AMN3ZIA: сохранено в Галерею (" + name + ")");
                 }
             } else {
-                // Android 9 and below — write to public Pictures directory
-                File outDir = new File(Environment.getExternalStoragePublicDirectory(
+                File dir = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_PICTURES), ALBUM);
-                if (!outDir.exists()) outDir.mkdirs();
-                File dst = new File(outDir, name);
-                copyFile(srcFile, dst);
+                if (!dir.exists()) dir.mkdirs();
+                File dst = new File(dir, name);
+                try (FileInputStream in = new FileInputStream(srcFile);
+                     FileOutputStream out = new FileOutputStream(dst)) {
+                    copyStream(srcFile, out);
+                }
                 MediaScannerConnection.scanFile(context,
-                    new String[]{dst.getAbsolutePath()},
-                    new String[]{mime}, null);
+                    new String[]{dst.getAbsolutePath()}, new String[]{mime}, null);
+                showToast(context, "AMN3ZIA: сохранено → " + name);
                 Log.i(TAG, "Saved to Pictures: " + dst.getAbsolutePath());
-                showToast(context, "AMN3ZIA: сохранено в Галерею (" + name + ")");
             }
         } catch (Exception e) {
             Log.e(TAG, "Save failed", e);
@@ -144,49 +135,36 @@ public class AmnAntiViewOnce {
         return isVideo ? ".mp4" : ".jpg";
     }
 
-    private static void copyFile(File src, File dst) throws IOException {
-        try (FileInputStream in = new FileInputStream(src);
-             FileOutputStream out = new FileOutputStream(dst)) {
-            copyStream(in, out);
-        }
-    }
-
     private static void copyStream(File src, OutputStream out) throws IOException {
         try (FileInputStream in = new FileInputStream(src)) {
-            copyStream(in, out);
+            byte[] buf = new byte[65536]; int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
         }
     }
 
-    private static void copyStream(FileInputStream in, OutputStream out) throws IOException {
-        byte[] buf = new byte[65536];
-        int n;
-        while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+    private static void copyStream(File src, FileOutputStream out) throws IOException {
+        try (FileInputStream in = new FileInputStream(src)) {
+            byte[] buf = new byte[65536]; int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+        }
     }
 }
 JAVA
-echo "    Created AmnAntiViewOnce.java (MediaStore v2)"
+echo "    Created AmnAntiViewOnce.java v3"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Patch FileLoader.java
-#    Inject BEFORE delegate.fileDidLoaded(...)
-#    Variables in scope: finalFile (File), parentObject (Object)
+# Patch FileLoader.java — inject before delegate.fileDidLoaded()
 # ─────────────────────────────────────────────────────────────────────────────
 FL="$MSRC/messenger/FileLoader.java"
 if [ -f "$FL" ]; then
     if ! grep -q "AmnAntiViewOnce" "$FL"; then
         python3 - "$FL" << 'PY'
 import sys
-
 path = sys.argv[1]
 with open(path, 'r', encoding='utf-8') as f:
     src = f.read()
 
-# Anchor: the if-delegate-not-null block calling fileDidLoaded
-# Actual source (confirmed from commit 9fea726):
-#     if (delegate != null) {
-#         delegate.fileDidLoaded(fileName, finalFile, parentObject, finalType);
-#     }
-# We search without leading whitespace (substring match handles indentation)
+# Confirmed anchor from commit 9fea726 FileLoader.java:
 old = 'if (delegate != null) {\n                        delegate.fileDidLoaded('
 new = (
     '// AMN3ZIA: save view-once before self-destruct fires\n'
@@ -204,39 +182,37 @@ new = (
 
 if old in src:
     src = src.replace(old, new, 1)
-    print('    Patched FileLoader.java (view-once saver injected)')
+    print('    Patched FileLoader.java (view-once injected)')
     with open(path, 'w', encoding='utf-8') as f:
         f.write(src)
 else:
-    # Try alternative indentation (some builds use different spacing)
+    # Try alternate indentation
     old2 = 'if (delegate != null) {\n                    delegate.fileDidLoaded('
     new2 = (
-        '// AMN3ZIA: save view-once before self-destruct fires\n'
+        '// AMN3ZIA view-once\n'
         '            if (parentObject instanceof MessageObject) {\n'
         '                MessageObject _amnMo = (MessageObject) parentObject;\n'
-        '                if (_amnMo.messageOwner != null && _amnMo.messageOwner.media != null) {\n'
-        '                    AmnAntiViewOnce.onFileReady(\n'
-        '                        ApplicationLoader.applicationContext,\n'
+        '                if (_amnMo.messageOwner != null && _amnMo.messageOwner.media != null)\n'
+        '                    AmnAntiViewOnce.onFileReady(ApplicationLoader.applicationContext,\n'
         '                        finalFile, _amnMo.messageOwner.media);\n'
-        '                }\n'
         '            }\n'
         '            if (delegate != null) {\n'
         '                    delegate.fileDidLoaded('
     )
     if old2 in src:
         src = src.replace(old2, new2, 1)
-        print('    Patched FileLoader.java (view-once, alt indentation)')
+        print('    Patched FileLoader.java (alt indent)')
         with open(path, 'w', encoding='utf-8') as f:
             f.write(src)
     else:
-        print('    WARN: fileDidLoaded anchor not found — view-once NOT applied')
-        print('    Trying to show what is around delegate.fileDidLoaded...')
         idx = src.find('delegate.fileDidLoaded(')
-        if idx >= 0:
-            print(repr(src[max(0,idx-200):idx+100]))
+        if idx > 0:
+            print(f'    WARN: anchor not matched. Context: {repr(src[max(0,idx-120):idx+50])}')
+        else:
+            print('    WARN: fileDidLoaded not found at all')
 PY
     else
-        echo "    FileLoader.java already patched"
+        echo "    FileLoader already patched"
     fi
 else
     echo "    WARN: FileLoader.java not found"

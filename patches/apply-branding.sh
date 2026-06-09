@@ -65,14 +65,21 @@ fi
 echo "  [2/4] App name..."
 
 # strings.xml files (all locales)
+# NOTE: Telegram debug build uses @string/AppNameBeta (= "Telegram Beta").
+# We replace ALL variants: AppName, AppNameBeta, app_name.
 while IFS= read -r -d '' f; do
-  sed -i 's|<string name="app_name">Telegram</string>|<string name="app_name">AMN3ZIA</string>|g' "$f" 2>/dev/null || true
-  sed -i 's|<string name="app_name">Telegram X</string>|<string name="app_name">AMN3ZIA</string>|g' "$f" 2>/dev/null || true
+  sed -i 's|<string name="AppName">Telegram</string>|<string name="AppName">AMN3ZIA</string>|g'                  "$f" 2>/dev/null || true
+  sed -i 's|<string name="AppNameBeta">Telegram Beta</string>|<string name="AppNameBeta">AMN3ZIA</string>|g'     "$f" 2>/dev/null || true
+  sed -i 's|<string name="app_name">Telegram</string>|<string name="app_name">AMN3ZIA</string>|g'                "$f" 2>/dev/null || true
+  sed -i 's|<string name="app_name">Telegram X</string>|<string name="app_name">AMN3ZIA</string>|g'              "$f" 2>/dev/null || true
 done < <(find "$TG" -path "*/res/values*/strings.xml" -print0 2>/dev/null)
 
-# AndroidManifest
+# AndroidManifest — replace any hardcoded label AND string-ref labels
 while IFS= read -r -d '' f; do
-  sed -i 's|android:label="Telegram"|android:label="AMN3ZIA"|g' "$f" 2>/dev/null || true
+  sed -i 's|android:label="Telegram"|android:label="AMN3ZIA"|g'             "$f" 2>/dev/null || true
+  sed -i 's|android:label="@string/AppName"|android:label="AMN3ZIA"|g'      "$f" 2>/dev/null || true
+  sed -i 's|android:label="@string/AppNameBeta"|android:label="AMN3ZIA"|g'  "$f" 2>/dev/null || true
+  sed -i 's|android:label="@string/app_name"|android:label="AMN3ZIA"|g'     "$f" 2>/dev/null || true
 done < <(find "$TG" -name "AndroidManifest.xml" -print0 2>/dev/null)
 
 echo "    Done."

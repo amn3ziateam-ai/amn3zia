@@ -50,16 +50,38 @@ for density, size in DENSITIES.items():
 
     resized = img.resize((size, size), Image.LANCZOS)
 
-    for name in ["ic_launcher.png", "ic_launcher_round.png",
-                 "ic_launcher_foreground.png"]:
+    # Replace all possible launcher icon filenames.
+    # ic_launcher.png / ic_launcher_round.png  — used by AndroidManifest
+    # icon_foreground.png / icon_foreground_round.png  — used by mipmap-anydpi-v26 adaptive icon XML
+    # ic_launcher_foreground.png — legacy foreground reference
+    for name in [
+        "ic_launcher.png", "ic_launcher_round.png",
+        "ic_launcher_foreground.png",
+        "icon_foreground.png", "icon_foreground_round.png",
+        "icon_foreground_sa.png",
+    ]:
         out = os.path.join(folder, name)
+        # Always write (create if missing, replace if exists)
         resized.save(out, "PNG", optimize=True)
         placed += 1
 
 print(f"  Placed {placed} icon files across {len(DENSITIES)} densities")
 
-# Also replace the notification / status-bar icon (white silhouette isn't needed
-# but replace with a smaller version so it compiles without errors)
+# Delete adaptive icon XML files that override our PNGs on Android 8+.
+# mipmap-anydpi-v26/ic_launcher.xml points to @mipmap/icon_foreground which
+# would show the original Telegram icon even after we replaced ic_launcher.png.
+anydpi_dir = os.path.join(RES, "mipmap-anydpi-v26")
+removed = 0
+for xml_name in ["ic_launcher.xml", "ic_launcher_round.xml"]:
+    xml_path = os.path.join(anydpi_dir, xml_name)
+    if os.path.exists(xml_path):
+        os.remove(xml_path)
+        removed += 1
+        print(f"  Removed adaptive icon override: {xml_name}")
+if removed == 0:
+    print("  (no adaptive icon XMLs found to remove)")
+
+# Also replace notification icons
 for density, size in DENSITIES.items():
     folder = os.path.join(RES, density)
     small = img.resize((size, size), Image.LANCZOS)
